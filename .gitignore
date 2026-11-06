@@ -1,0 +1,19 @@
+# Environment
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Data and outputs: never commit these
+raw/
+processed/
+features/
+checkpoints/
+artifacts/
+outputs/
+multirun/
+wandb/
+*.parquet
+*.npy
+*.pt
+*.onnx

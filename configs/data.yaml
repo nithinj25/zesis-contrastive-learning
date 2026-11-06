@@ -1,0 +1,10 @@
+# Data split settings (CLAUDE.md sections 5.3, 9.6, 20). Read by data/splits.py.
+pool_target: 22500        # total pretraining pool; keeps K = 8,192 (~0.4 x pool) and the ~6 h budget (section 7.6)
+pool_grades: [good, usable, ungraded]   # rejects never enter; only EyePACS is graded (data/quality.py explains why)
+eyepacs_priority: ["eyeq:good", "eyeq:usable", "tree:good", "tree:usable"]  # human grades first, random within a step
+val_b_fraction: 0.5       # val-A tunes, val-B only sets the conformal threshold (section 10.4)
+seed: 0
+colour_alpha: 0.7         # step 7 strength (section 6)
+clahe_clip: 1.5           # step 8 (section 6)
+illumination_strength: 0.6
+illumination_sigma_fraction: 0.125   # sigma = image size / 8 = 64 px at 512 (section 20)

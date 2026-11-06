@@ -1,0 +1,133 @@
+# TRACE label vocabulary (CLAUDE.md section 5.6). Every dataset label -> one finding or disease name.
+#
+# status: sourced       = the label's meaning is quoted from the dataset's own paper (below). The mapping onto a
+#                         TRACE finding/disease is the spec's (5.6); not yet reviewed by a clinician.
+#         draft         = mapping from the spec, meaning not confirmed by a dataset paper.
+#         uncertain     = the data or the papers contradict a simple reading.
+#         reviewed      = checked by a clinician (none yet).
+# Papers (raw/papers/, read 2026-11-06):
+#   RFMiD:     Pachade et al., Data 2021, 6, 14 ("brief explanation ... of all 45 categories", Table 3).
+#   RFMiD 2.0: Panchal et al., Data 2023, 8, 29 (disease descriptions and its class table).
+# Only findings with enough training positives become detectors (section 8.3: >= 20 detector, 5-19 prototype,
+# < 5 dropped); splits.py reports the counts. Never add a meaning without a source.
+
+findings:
+  disc_edema:        {location: disc, labels: {rfmid: [ODE], rfmid2: [ODE]}, status: sourced, paper: "Optic disc edema (both)"}
+  disc_pallor:       {location: disc, labels: {rfmid: [ODP], rfmid2: [ODP]}, status: sourced, paper: "Optic disc pallor (both)"}
+  disc_cupping:      {location: disc, labels: {rfmid: [ODC], rfmid2: [ODC]}, status: sourced, paper: "Optic disc cupping (both)"}
+  tilted_disc:       {location: disc, labels: {rfmid: [TD], rfmid2: [TD]}, status: sourced, paper: "Tilted disc (both)"}
+  optociliary_shunt: {location: disc, labels: {rfmid: [ST], rfmid2: [ST]}, status: sourced, paper: "Optociliary shunt (both)"}
+  haemorrhage:
+    location: anywhere
+    labels: {rfmid: [HR, PRH], rfmid2: [HR, PRH], idrid_seg: [idrid_HE]}
+    status: sourced
+    paper: >-
+      HR = "Hemorrhagic retinopathy ... a particular form of retinopathy which is hemorrhagic in nature" (RFMiD) and
+      "Haemorrhagic Retinopathy ... blood flow from retinal blood vessels into the retina leads to hemorrhages"
+      (RFMiD 2.0): the same meaning in both. PRH = Preretinal hemorrhage (both). RFMiD has only 1 HR photo.
+  microaneurysm:
+    location: posterior_pole
+    labels: {rfmid2: [MCA], idrid_seg: [idrid_MA]}
+    status: sourced
+    paper: >-
+      RFMiD 2.0: MCA = "Microaneurysm ... small, dispersed red dots". NOT RFMiD: there MCA = "Macroaneurysm ... fusiform
+      or round dilation of the retinal arterioles", a different lesion (1 photo), left unmapped.
+  hard_exudates:
+    location: macula
+    labels: {rfmid: [EDN], rfmid2: [EDN], idrid_seg: [idrid_EX]}
+    status: sourced
+    paper: "EDN = Exudation (RFMiD); RFMiD 2.0 calls it Exudation (EX) in its text and EDN in its class table."
+  cotton_wool_spots: {location: posterior_pole, labels: {rfmid: [CWS], rfmid2: [CWS], idrid_seg: [idrid_SE]}, status: sourced, paper: "Cotton-wool spots (both)"}
+  drusen:            {location: macula, labels: {rfmid: [DN], rfmid2: [DN]}, status: sourced, paper: "Drusens (both)"}
+  macular_edema:
+    location: macula
+    labels: {rfmid: [CME], rfmid2: [ME, CME]}
+    status: sourced
+    paper: >-
+      RFMiD: CME = Cystoid macular edema. RFMiD 2.0: ME = Macular Edema; its class table lists ME 41 and no CME, while
+      its CSV has CME 36 and ME 4, so both columns are counted here.
+  macular_scar:      {location: macula, labels: {rfmid: [MS], rfmid2: [MS]}, status: sourced, paper: "Macular scar (both)"}
+  macular_hole:      {location: macula, labels: {rfmid: [MHL], rfmid2: [MHL]}, status: sourced, paper: "Macular hole (both)"}
+  tortuous_vessels:  {location: vessels, labels: {rfmid: [TV], rfmid2: [TV]}, status: sourced, paper: "Tortuous vessels (both)"}
+  rpe_changes:       {location: background, labels: {rfmid: [RPEC], rfmid2: [RPEC]}, status: sourced, paper: "Retinal pigment epithelium changes (both)"}
+  tessellation:      {location: background, labels: {rfmid: [TSLN], rfmid2: [TSLN]}, status: sourced, paper: "Tessellation (both)"}
+  choroidal_folds:   {location: background, labels: {rfmid: [CF], rfmid2: [CF]}, status: sourced, paper: "Choroidal folds (both)"}
+  laser_scars:       {location: periphery, labels: {rfmid: [LS], rfmid2: [LS]}, status: sourced, paper: "Laser scars (both)"}
+  retinal_traction:  {location: periphery, labels: {rfmid: [RT], rfmid2: [RT]}, status: sourced, paper: "Retinal traction (both)"}
+  media_haze:        {location: whole_image, labels: {rfmid: [MH], rfmid2: [MH]}, status: sourced, paper: "Media haze (both)"}
+  # Spec 5.6 also lists neovascularisation: RFMiD 2.0 describes NV in its text, but neither dataset has an NV column.
+
+diseases:
+  normal:
+    labels: {rfmid2: [WNL]}
+    rule: "RFMiD: a labelled photo with no labels and Disease_Risk 0 is normal (its table calls this class NL)."
+    status: sourced
+    paper: "WNL = Within Normal Limit (RFMiD 2.0)"
+  DR:
+    labels: {rfmid: [DR], rfmid2: [DR], idrid: [idrid_dr1, idrid_dr2, idrid_dr3, idrid_dr4],
+             paraguay: [paraguay_dr2, paraguay_dr3, paraguay_dr4, paraguay_dr5, paraguay_dr6, paraguay_dr7],
+             jsiec: [DR1, DR2, DR3]}
+    status: sourced
+    paper: "Diabetic Retinopathy (both). Paraguay folders 2-7 are named NPDR/PDR grades, folder 1 'No DR signs'. IDRiD grade 0 = no DR."
+  ARMD: {labels: {rfmid: [ARMD], rfmid2: [ARMD]}, status: sourced, paper: "Age-related macular degeneration (both)"}
+  BRVO: {labels: {rfmid: [BRVO], rfmid2: [BRVO], jsiec: [BRVO]}, status: sourced, paper: "Branch retinal vein occlusion (both)"}
+  CRVO: {labels: {rfmid: [CRVO], rfmid2: [CRVO], jsiec: [CRVO]}, status: sourced, paper: "Central retinal vein occlusion (both)"}
+  CRAO:
+    labels: {rfmid: [CRAO], rfmid2: [CRAO]}
+    status: sourced
+    paper: "Central retinal artery occlusion (both). JSIEC 'RAO' is not mapped: it may include branch occlusions."
+  BRAO: {labels: {rfmid: [BRAO]}, status: sourced, paper: "Branch retinal artery occlusion (RFMiD)"}
+  AION: {labels: {rfmid: [AION], rfmid2: [AION]}, status: sourced, paper: "Anterior ischemic optic neuropathy (both)"}
+  CSR:  {labels: {rfmid: [CSR], rfmid2: [CSR]}, status: sourced, paper: "Central serous retinopathy (both). RFMiD 2.0's CSC is cysticercosis, not CSR."}
+  RP:   {labels: {rfmid: [RP], rfmid2: [RP], jsiec: [Retinitis pigmentosa]}, status: sourced, paper: "Retinitis pigmentosa (both)"}
+  myopia: {labels: {rfmid: [MYA], rfmid2: [MYA]}, status: sourced, paper: "Myopia (both)"}
+  hypertensive_retinopathy:
+    labels: {rfmid2: [HTN]}
+    status: sourced
+    paper: "RFMiD 2.0's class table lists HTN (11); its text describes the class as Hypertensive Retinopathy (HTR)."
+  optic_neuritis: {labels: {rfmid2: [ON]}, status: sourced, paper: "Optic Neuritis (RFMiD 2.0)"}
+
+# Leave-disease-out targets (section 9.6; provisional, section 2.3 item 2). All their photos leave the pool and
+# head training and form their test set.
+leave_disease_out: [AION, CRVO, RP]
+
+# Meaning confirmed by the papers, but not yet placed as a TRACE finding or disease (the graph phase decides;
+# several are rare). Not used for training.
+sourced_unmapped:
+  rfmid:
+    AH: Asteroid hyalosis
+    CB: Coloboma
+    CL: Collateral
+    CRS: Chorioretinitis
+    ERM: Epiretinal membrane
+    HPED: Hemorrhagic pigment epithelial detachment
+    MCA: Macroaneurysm (not microaneurysm)
+    ODPM: Optic disc pit maculopathy
+    PLQ: Plaque
+    PT: Parafoveal telangiectasia
+    PTCR: Post-traumatic choroidal rupture
+    RS: Retinitis
+    VH: Vitreous hemorrhage
+    VS: Vasculitis
+  rfmid2:
+    AH: Asteroid Hyalosis
+    CB: Coloboma
+    CL: Collateral
+    CRS: Chorioretinitis
+    CSC: Cysticercosis
+    ERM: Epiretinal Membrane
+    GRT: Giant Retinal Tear
+    HPED: Hemorrhagic Pigment Epithelial Detachment
+    IIH: Idiopathic Intracranial Hypertension
+    OPDM: Optic disc pit maculopathy (table OPDM, text ODPM)
+    RD: Retinal Detachment
+    RHL: Retinal holes (text "Retinal Holes and tears (RHL and RTR)")
+    RTR: Retinal tears (same)
+    RS: Retinitis
+    SOFE: Silicone Oil-Filled Eye
+    VS: Vasculitis
+
+# In the data, but no definition found in either paper's text:
+needs_source:
+  rfmid: [MNF]
+  rfmid2: [CNV]
