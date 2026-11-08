@@ -84,6 +84,18 @@ def choose_pool(meta: pd.DataFrame, cfg: dict) -> pd.Series:
     return chosen
 
 
+def mine_sources(meta: pd.DataFrame, merge: dict | None) -> pd.Series:
+    """The source ID the mining loss uses (section 7.4). Normally the same as `source` (which also picks step 7's
+    colour stats), except groups the pseudo-domain check (scripts/pseudo_domains.py, section 5.5) could not tell
+    apart from a known camera: those share that camera's mining ID, so their pairs never count as cross-source.
+    merge: {"dataset:size_group": source}."""
+    out = meta.source.astype(str).copy()
+    for key, src in (merge or {}).items():
+        ds, size = key.split(":")
+        out[(meta.dataset == ds) & (meta.size_group == size)] = src
+    return out
+
+
 def build(raw: pd.DataFrame, dedupe: pd.DataFrame, proc: pd.DataFrame, quality: pd.DataFrame,
           onto: Ontology, cfg: dict) -> pd.DataFrame:
     meta = raw.merge(dedupe[["image_id", "dup_group", "dup_drop", "dup_reason"]], on="image_id", how="left")
@@ -135,6 +147,7 @@ def build(raw: pd.DataFrame, dedupe: pd.DataFrame, proc: pd.DataFrame, quality: 
     meta["in_pool"] = (meta.bucket == "pool") | ((meta.bucket == "train") & meta.q_grade.isin(cfg["pool_grades"]))
     meta["in_heads"] = (meta.bucket == "train") & meta.label_ok
     meta["exclude_reason"] = reason
+    meta["mine_source"] = mine_sources(meta, cfg.get("mine_merge"))
     return meta.reset_index(drop=True)
 
 

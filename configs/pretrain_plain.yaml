@@ -1,0 +1,9 @@
+# Phase 2 baseline: plain MoCo v2 on the same pool. No TRACE additions: standard MoCo v2 views, two views only,
+# no mining, beta = 1 (so the loss is exactly InfoNCE). Everything else as configs/pretrain.yaml.
+defaults:
+  - pretrain
+  - _self_
+
+encoder_name: moco_plain
+mining: {enabled: false, beta: 1.0}
+views: {policy: plain, n_local: 0}

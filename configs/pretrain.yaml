@@ -4,10 +4,12 @@ data: {meta: data/meta.parquet, pool_splits: [pool], img_root: processed/}
 model: {arch: resnet50, init: imagenet, proj_dims: [2048, 2048, 256]}
 moco: {K: 8192, m: 0.999, tau: 0.2}           # K about 0.4 x pool: 768 if RFMiD-only, 4096 for the ladder
 mining: {enabled: true, warmup_epochs: 20, top_frac: 0.01, knn: 10, beta: 2.0, alpha: 0.5}
-views: {global_px: 224, local_px: 96, n_local: 4, global_scale: [0.6, 1.0], local_scale: [0.15, 0.35]}
+views: {policy: retina, artifacts: true, global_px: 224, local_px: 96, n_local: 4, global_scale: [0.6, 1.0], local_scale: [0.15, 0.35]}   # artifacts: section 19.5 (false = ablation rung without)
 optim: {name: sgd, lr_base: 0.03, momentum: 0.9, wd: 1.0e-4, batch: 32, epochs: 100, warmup_epochs: 5}
 amp: true
-ckpt: {dir: checkpoints/, every: 1, keep: 2, resume: null}   # /kaggle/working/ckpt on Kaggle
-eval_every: 5
+ckpt: {dir: checkpoints/, every: 1, keep: 2, resume: null, every_steps: 300}   # /kaggle/working/ckpt on Kaggle; every_steps: mid-epoch last.pt (~2 min), so a GPU crash loses little
+eval_every: 5                                 # val-A check + saved backbone every N epochs (0 = off), section 7.7
+eval_size: 384                                # same resolution as the final feature extraction (section 19.1)
+train: {workers: 10, max_steps: 0, log_every: 50, mem_fraction: 0.8, shuffle_chunks: 2}   # max_steps > 0: stop early (timing runs)
 seed: 0
 wandb: {project: trace, mode: offline}        # online once an account exists

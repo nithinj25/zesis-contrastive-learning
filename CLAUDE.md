@@ -549,6 +549,8 @@ tensors, so **no dataloader cost and no sustained-heat test**. These are best-ca
 | 16 | 384/160 px | 6.25 GB | 35 img/s |
 | 24 | 384/160 px | Over the 6.4 GB cap | — |
 
+**Measured on real data (2026-11-06, plain MoCo, 2 views, 224 px, batch 32): ~125 img/s steady, 3.4 GB peak; one epoch
+on the 22.5k pool ≈ 3 min, 100 epochs ≈ 5 h.** The view loader, not the GPU, sets this speed (§20).
 Speed is flat across batch sizes, so use batch 32 and keep the headroom. **On Windows, going over budget can page GPU
 memory into system RAM and crawl instead of raising an out-of-memory error**, so set
 `torch.cuda.set_per_process_memory_fraction`. Best-case times: 22.5k pool, 100 epochs ≈ 6 h; 384 px phase, 20 epochs
@@ -1288,8 +1290,100 @@ Reviewed answers to the open design questions. The sections above already reflec
 - **Phase 1 exit check, camera probe** (`scripts/camera_probe.py`): dataset guessed from simple photo statistics, 8 datasets (chance 0.125):
   raw 0.687 → after steps 3–6 0.614. 4 training datasets (chance 0.25): 0.805 → 0.717 → 0.493 after step 7. Biology probes on RFMiD:
   disc pallor AUROC 0.615 → 0.634, media haze 0.753 → 0.794. Camera signal falls, the findings do not.
-- **Still open from Phase 1:** pseudo-domain check (§5.5; must settle the APTOS sizes that equal RFMiD cameras before mining), REFUGE and
-  ODIR ingest when downloaded.
+- **Still open from Phase 1:** REFUGE and ODIR ingest when downloaded (ODIR: one source, per the §5.5 fallback below). The pseudo-domain
+  check was settled in Phase 3 (below).
+
+**Phase 2 (2026-11-06):**
+- **Encoder interface** (`encoder/export.py`, §19.1): `TraceEncoder`, `load_trace_encoder`, `preprocess`; ImageNet normalisation inside;
+  step 7 only for a camera with stored statistics. Feature cache `encoder/features.py` (§19.2): 26,962 photos in 7 min.
+- **ImageNet ResNet-50 baseline** (`eval/probes.py`, `outputs/eval/baselines.csv`): RFMiD linear macro-AUROC 0.885 [0.863, 0.905] over 18
+  labels (CRVO left out: leave-disease-out), kNN 0.759, Disease_Risk 0.963; IDRiD any-DR 0.865, referable 0.903, 5-grade balanced accuracy
+  0.394; Paraguay any-DR from an IDRiD-trained probe 0.863. **Camera probe on its features: 0.971 balanced accuracy over 7 training
+  sources (chance 0.143)**: ImageNet features identify the camera almost perfectly, the problem TRACE targets.
+- **MoCo core** (`encoder/moco.py`, `encoder/loss.py`): reproduces every §16 number and the §7.4 worked example (0.833 → 0.900). Shuffle-BN
+  on one GPU = key encoder on shuffled sub-batches.
+- **Windows RAM:** torch DataLoader workers each committed ~1.7 GB (~500–690 MB resident); 6 of them left ~400 MB free and training
+  crawled. `augment/loader.py` replaces them with workers that never import torch (~100 MB resident each); views travel as uint8.
+  Views are fixed by (seed, epoch, batch), so runs are reproducible and resume mid-epoch exactly: stop at step 100 + resume to 200 matched a
+  straight run within 0.003 loss (GPU arithmetic order only).
+- **View cost** (one core): PNG decode 14 ms, CLAHE 16 ms (now once per photo, not per view), jitter cut from 14 ms to a few ms.
+- **Plain MoCo v2, short budget** (15 epochs, full 22.5k pool, standard MoCo v2 views, β = 1, no mining; 47 min, final loss 5.27, per-dim
+  std 0.0625, no collapse): RFMiD linear macro-AUROC **0.917** [0.898, 0.935] vs ImageNet 0.885 [0.863, 0.905]; kNN **0.851** vs 0.759;
+  Disease_Risk 0.970 vs 0.963; Paraguay any-DR from an IDRiD probe **0.902** vs 0.863; IDRiD any-DR 0.859 vs 0.865, referable 0.906 vs 0.903,
+  5-grade balanced accuracy 0.348 vs 0.394 (103 test photos; noisy). The intervals overlap, so a paired bootstrap on the same test photos is
+  still needed before calling the linear-probe gain significant. **Camera probe 0.960 vs 0.971: plain MoCo does not remove camera signal.**
+  That is the gap TRACE's views, colour step and β weighting must close (barrier 03), and it is the comparison to report.
+- **Plain MoCo v2, full 100 epochs** (2026-11-07; 4 h 55 min, 133 img/s, 3.45 GB, final loss 4.75, per-dim std 0.0626, no collapse):
+  RFMiD linear **0.892** [0.864, 0.917] (15 ep: 0.917); kNN 0.819 (0.851); Disease_Risk 0.965 (0.970); IDRiD any-DR **0.887** (0.859),
+  referable 0.920 (0.906), 5-grade 0.410 (0.348); Paraguay any-DR from IDRiD **0.819** (0.902); camera probe 0.969 (0.960).
+  **Longer is not better on RFMiD or Paraguay**; it gains on IDRiD (DR, the pool's majority task: EyePACS is 75% of it). The epoch must
+  be chosen on **val-A** (in-loop kNN/probe, §7.7), never by comparing these test numbers. Camera signal is untouched at 100 epochs.
+- **Val-A selection** (`eval/val_select.py`, in `encoder/train.py` every `eval_every` epochs; 377 val-A photos, 17 finding/disease labels
+  with ≥ 5 positives; probe trained on head-training; ~60 s a check): ImageNet 0.883 (kNN 0.787); 15-epoch run at epoch 10 0.914,
+  epoch 15 0.914 (kNN 0.833); 100-epoch run at epoch 90 0.909, epoch 100 0.908 (kNN 0.822). Val-A agrees with test: no gain from 100
+  epochs. The 0.006 gap is small for 377 photos. The 15-epoch run had its own (shorter) cosine schedule, so it is not epoch 15 of the long run.
+  **C = 0.01, the smallest value in the §19.7 grid, won every time**, so the best C may lie below the grid.
+  A 1-epoch smoke run (whole cosine schedule in one epoch) already reached val-A 0.9085 (kNN 0.836), the same as 100 epochs: with
+  plain MoCo almost all of the gain over ImageNet comes in the first epoch. Why is not tested (one guess: BatchNorm adapting to fundus photos).
+
+**Phase 3 (2026-11-07):**
+- **Retina-safe views** (`augment/views.py`, policy `retina`): square crop of 60–100% of the retina's area (side 351–454 px at R = 256),
+  centre within R − side/2 of the retina centre (views ≥ 75% retina); ±15° rotation + flip in one anti-aliased resample; step 7 with
+  p = 0.5; artifact hook; jitter 0.2/0.2/0.1/0.02 with p = 0.8 (contrast mean taken inside the mask); blur σ 0.1–1.0 with p = 0.3; step 8
+  last, CLAHE tiles = 8 × side / 512 so a tile covers the same retina patch as at evaluation. Retina geometry comes from the photo size
+  (step 4 makes the retina circle span the width; mask area underestimates it on flat-cut photos). 7.6 ms a view on one core; training
+  with 2 retina views runs at ~130 img/s, the same as plain. Contact sheet `scripts/view_sheet.py`: lesions survive in every view.
+- **Artifact simulator** (`augment/artifacts.py`, `views.artifacts: true`; §19.5 probabilities and ranges, lengths rescaled to the
+  retina's diameter in the view). Two choices §19.5 leaves open, made after the per-artifact contact sheet:
+  (1) **glints only on the outer rim (70–95% of the radius)**: a glint is 2–6% of the diameter (~20–60 px at 512), the size of a cotton
+  wool spot at the posterior pole, the same trap as dust (a judgment call, no source); (2) **the colour profile starts from the view's
+  actual colour**: its own camera's LAB stats, or after step 7 the exact blend (1 − α)·camera + α·pool (step 7 is linear). Starting from
+  the pool's stats when step 7 had not run made dark photos nearly black. Views with artifacts cost ~10 ms; training stays at
+  ~125 img/s. On the random-mix sheet about 1 view in 56 (dark Kowa photo, colour + vignette together) hides most lesion detail: watch it.
+- **Multi-crop** (`views.n_local: 4`; `encoder/loss.py: multicrop_loss`, equal to the explicit 10-pair loop in value and gradients):
+  locals use the same retina recipe at 96 px and 15–35% of the retina's area (side 176–268 px at 512; ≥ 95% of every local is retina,
+  2,000 draws). Each photo's locals are drawn after its globals, so `n_local: 0` reproduces the two-view runs exactly. The query encoder runs
+  the 4B locals as one separate batch (own BatchNorm statistics, own size). 600-step real-data run: GPU alone 103 img/s (130 without locals);
+  loader-bound at 66 img/s with 6 workers, **84 img/s steady with 10** (12 ran out of RAM); 4.54 GB peak. Loss peaks near 9.0 at step
+  ~256 (= K/B, the queue has just filled with real keys) and then falls; local loss above global (8.34 vs 7.94 at step 600); no collapse.
+- **Pseudo-domain check** (§5.5; `scripts/pseudo_domains.py`, `outputs/pseudo_domains.json`):
+  (1) **k-means fails, so the fallback holds: one source per dataset** (EyePACS, APTOS, later ODIR). On RFMiD without image size, k = 3–8,
+  Topcon 3D OCT-2000 never keeps more than 0.59 of its photos in one cluster (bar 0.9), with or without mask-shape features.
+  (2) **APTOS photos at a known camera's size**: two-sample AUROC (5-fold, same-eye copies in one fold) on photo statistics of the
+  *processed* photo, i.e. cues that survive preprocessing. References: same camera, same dataset 0.60–0.78; same camera model, other
+  dataset (IDRiD vs RFMiD Kowa) 0.70; same camera, other dataset (TRC-NW300, RFMiD vs RFMiD 2.0) 0.94 [0.912, 0.961]; different cameras
+  ≈ 1.00. Clashes: 2144×1424 vs OCT-2000 1.000, 2048×1536 vs TRC-NW300 0.992, 1504×1000 vs RFMiD 2.0's group 0.992: distinct, kept
+  separate. **4288×2848 vs Kowa 0.967 [0.953, 0.982] overlaps the same-camera reference, so its 52 photos share Kowa's mining ID**
+  (the safe error; a judgment call). Mining reads the new `mine_source` column (`configs/data.yaml: mine_merge`); step 7 keeps `source`,
+  because those photos' colour differs from RFMiD's Kowa photos. Encoder features can't settle this (IDRiD vs Kowa already 0.97: they pick up
+  population and processing too), and the dedupe score is not a camera fingerprint (APTOS 1050×1050, a size no RFMiD camera has, matches
+  TRC-NW300 and Kowa as often as same-size groups do). RFMiD 2.0's 512×512 and 1504×1000 groups are distinct from TRC-NW300 and from each
+  other (≥ 0.996). Limit: "separable" does not prove no shared cue, so the mining step must log attracted pairs by (anchor source, key source).
+- **Mining monitor** (`encoder/mining_monitor.py`; `outputs/train/<name>/mining.csv` + `mining_sources.jsonl`, per epoch once mining is on).
+  Labels only measure, never train. Purity two ways: findings/diseases on labelled RFMiD / RFMiD 2.0 pool photos (normal–normal left out;
+  chance 0.059), and DR on every pool photo (EyePACS / APTOS grade ≥ 1 or RFMiD "DR"; no-DR pairs left out; chance 0.182). Also the
+  condition that blocks candidates, same-eye share, and attracted pairs per (anchor source, key source) vs the queue's make-up, with purity
+  per source pair (high ratio + low purity would mean a camera cue). The queue now stores each key's pool row (`queue_idx`).
+- **Mining check run** (`trace_check`: full TRACE config, mining from epoch 2 instead of 20, 7 epochs, 83 img/s with the monitor): attraction
+  fires, 2.4–2.8 keys per anchor, 57–67% of anchors; of ~33 top-1% candidates per anchor, 80% fail the top-10 condition and ~82% the mutual
+  one. **Purity 0.29–0.32 vs chance 0.059: lift 4.9–5.4** (bar 2), flat over epochs 2–6; DR lift 1.43 → 1.57; same eye 0%; per-dim std
+  0.062, no collapse. The global loss drops when mining starts (6.95 → 5.08) because attracted keys become positives, not collapse.
+  Sources: pairs among the small non-EyePACS sources are attracted 2–6× more than the queue's make-up predicts (spread over many pairs, while
+  all of them attract EyePACS keys at 0.2–0.9×); the highest ratios involve RFMiD 2.0's two small size groups but are < 0.5% of attracted
+  pairs. Per-pair purity was added after this run to tell biology from a camera cue. Mining started on a 2-epoch encoder here; the real
+  run starts it at epoch 20.
+- **GPU crashes on the full run (trace_v1, 8 Nov):** `CUDNN_STATUS_EXECUTION_FAILED` in backward at epoch 4 after 23 min, then again
+  ~2 min after resuming. GPU at 86–87 °C (its target temperature, 3 °C from the slowdown limit), ~210 s of software thermal slowdown
+  logged; no driver-reset event in the Windows log. Likely heat (multi-crop + 10 CPU workers on a laptop with shared cooling), not proven.
+  Mitigation: `ckpt.every_steps: 300` (mid-epoch `last.pt`, resume is exact), 8 workers, and a restart loop (90 s cool-down, up to 30
+  tries; `outputs/trace_v1_restarts.txt`). After a crash `log.csv` repeats the steps since the last save (keep the last row per step), and
+  that epoch's mining row covers only the steps after the resume.
+- **Compute plan with real timings:** plain MoCo 100 epochs ≈ 5 h. TRACE (multi-crop, artifacts) **measured 84 img/s → 100 epochs ≈ 7.4 h**
+  (was estimated at 6.3 h);
+  384 px phase (20 epochs at ~35 img/s) ≈ 3.6 h; ablation ladder (10k photos, 30 epochs) ≈ 50 min a run. About 21 GPU-hours for the
+  headline runs and the ladder: fits locally if runs go overnight, with Kaggle for parallel ladder runs.
+- **Phase 2 status:** done when the baseline table is filled and the compute plan is redone. Both hold for ImageNet and plain MoCo. Still
+  missing from the §11 baseline list: supervised ResNet-50 fine-tuned on RFMiD, and RETFound (only if external weights are allowed).
 
 **ZEISS claim wording:** "Paraguay is an unseen site and dataset captured on a ZEISS VISUCAM 500, a model not identified in
 our pool. The pool does contain other ZEISS models (FF450plus via RFMiD 2.0) and ODIR images from unspecified Zeiss devices."

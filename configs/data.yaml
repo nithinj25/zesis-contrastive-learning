@@ -8,3 +8,5 @@ colour_alpha: 0.7         # step 7 strength (section 6)
 clahe_clip: 1.5           # step 8 (section 6)
 illumination_strength: 0.6
 illumination_sigma_fraction: 0.125   # sigma = image size / 8 = 64 px at 512 (section 20)
+mine_merge:               # mining source IDs (sections 5.5, 7.4); step 7 still uses `source`. From scripts/pseudo_domains.py:
+  "aptos:4288x2848": kowa_vx10a   # AUROC vs RFMiD Kowa 0.967 [0.953, 0.982] overlaps a same-camera reference [0.912, 0.961]

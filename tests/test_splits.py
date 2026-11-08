@@ -98,3 +98,14 @@ def test_camera_stats_never_use_held_out_photos():
     stats = preprocess_stats(meta, proc, CFG)
     assert "jsiec_x" not in stats["cameras"] and set(stats["cameras"]) == {"kowa", "topcon", "aptos", "eyepacs"}
     assert np.allclose(stats["pool"]["mean"], [100, 140, 150]) and stats["pool"]["n_photos"] == CFG["pool_target"]
+
+
+def test_mine_sources_merge_only_the_named_group():
+    from data.splits import mine_sources
+
+    meta = pd.DataFrame({"dataset": ["aptos", "aptos", "rfmid", "eyepacs"],
+                         "size_group": ["4288x2848", "1050x1050", "4288x2848", "4288x2848"],
+                         "source": ["aptos", "aptos", "kowa_vx10a", "eyepacs"]})
+    out = mine_sources(meta, {"aptos:4288x2848": "kowa_vx10a"})
+    assert out.tolist() == ["kowa_vx10a", "aptos", "kowa_vx10a", "eyepacs"]  # same size, other dataset: untouched
+    assert mine_sources(meta, None).tolist() == meta.source.tolist()
