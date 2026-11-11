@@ -1,0 +1,17 @@
+# Section 19.4 phase 2: 384 px globals / 160 px locals, starting from the val-selected 224 px encoder
+# (trace_v1 epoch 20). Batch 12 fits the laptop (4.7 GB measured). K / B = 8192 / 12 = 683 steps, so m is raised to
+# hold key drift at the same ~23% as m = 0.999 at K / B = 256 (section 7.6): 0.774 ** (1 / 683) = 0.99963.
+# Mining is OFF here: epoch 20 was chosen before mining started (attraction never raised val-A), so this run
+# continues exactly the recipe that produced it (beta = 2, no attraction) and measures resolution alone. Mining is
+# tested separately in the ablation ladder (deviation from section 19.4 "mining stays on", recorded in section 20).
+defaults:
+  - pretrain
+  - _self_
+
+encoder_name: trace_v1_384
+model: {init_from: checkpoints/trace_v1/encoder_best.pt}
+moco: {m: 0.99963}
+mining: {enabled: false}
+views: {global_px: 384, local_px: 160}
+optim: {batch: 12, epochs: 20, warmup_epochs: 1}
+train: {workers: 8}

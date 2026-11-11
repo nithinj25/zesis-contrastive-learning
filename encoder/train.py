@@ -125,6 +125,10 @@ def main(cfg: DictConfig) -> None:
 
     model = MoCo(cfg.model.init, cfg.model.proj_dims[-1], cfg.moco.K, cfg.moco.m, cfg.mining.get("knn", 10),
                  cfg.train.shuffle_chunks).to(device)
+    init_from = cfg.model.get("init_from")
+    if init_from and not cfg.ckpt.resume:  # e.g. the 384 px phase (section 19.4) from the val-selected 224 px encoder
+        model.load_backbone(torch.load(init_from, map_location="cpu"))
+        print(f"backbones initialised from {init_from}; new projection head and an empty queue")
     opt = torch.optim.SGD(model.q_enc.parameters(), lr=base_lr, momentum=cfg.optim.momentum, weight_decay=cfg.optim.wd)
     scaler = torch.amp.GradScaler(enabled=cfg.amp)
     out_dir = os.path.join(cfg.ckpt.dir, cfg.encoder_name)

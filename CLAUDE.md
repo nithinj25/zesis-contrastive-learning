@@ -1378,6 +1378,184 @@ Reviewed answers to the open design questions. The sections above already reflec
   Mitigation: `ckpt.every_steps: 300` (mid-epoch `last.pt`, resume is exact), 8 workers, and a restart loop (90 s cool-down, up to 30
   tries; `outputs/trace_v1_restarts.txt`). After a crash `log.csv` repeats the steps since the last save (keep the last row per step), and
   that epoch's mining row covers only the steps after the resume.
+- **Later crashes were RAM, not heat (9 Nov):** 5 more crashes, about hourly, were `MemoryError` in a loader worker. Windows commit was
+  63–64 GB of a 65 GB limit: training 16.3 GB (main process ~10 GB, 8 workers ~0.8 GB each), VS Code 11.8 GB, Chrome 9.3 GB,
+  Claude/ChatGPT apps 5.3 GB. No crash after the other apps were closed (06:07). Close other apps before a long run. The validation checks
+  at epochs 35, 45, 55 and 65 were lost because crashes hit them.
+- **trace_v1 full run (8–9 Nov; 100 epochs, mining from epoch 20; ~80 img/s; per-dim std 0.0624, no collapse):**
+  val-A linear/kNN: ep 0 0.883/0.787, 10 0.917/0.815, **20 0.919/0.842 (best)**, 30 0.919/0.834, 40 0.914/0.843, 60 0.914/0.833,
+  80 0.917/0.831, 100 0.914/0.831. **The val-selected checkpoint (epoch 20) was measured before mining started**: mining never
+  raised val-A. Mining: 3.0–3.3 attracted keys per anchor, same eye 0%; label lift 5.6 → 4.7 and DR lift 1.78 → 1.61, falling
+  slowly but above the bar of 2 (§7.4 says tighten or extend warm-up if purity falls).
+  **Test** (`outputs/eval/baselines.csv`): trace_v1 (= epoch 20) RFMiD linear **0.922** [0.906, 0.936], kNN 0.829, Disease_Risk 0.973,
+  IDRiD any-DR 0.871, referable 0.902, 5-grade 0.376, Paraguay 0.860, **camera probe 0.970**. Epoch 100: 0.905 [0.876, 0.927], kNN 0.807,
+  0.968, 0.862, 0.906, 0.334, 0.827, camera 0.978. Matched against plain MoCo at 100 epochs: linear 0.905 vs 0.892, kNN 0.807 vs 0.819,
+  IDRiD 0.862 vs 0.887, Paraguay 0.827 vs 0.819, camera 0.978 vs 0.969. **The camera probe did not fall for any encoder** (ImageNet 0.971):
+  the 7 sources also differ in population and disease mix, so this probe may be measuring more than the camera. Next: a cleaner
+  RFMiD-only 3-camera probe, leave-one-camera-out (§19.7), the paired bootstrap, and the ablation ladder to find out what mining does.
+- **Paired bootstrap** (`eval/compare.py`, 1,000 resamples of the same test photos; `outputs/eval/compare.json`), trace_v1 minus:
+  ImageNet RFMiD +0.037 [+0.023, +0.052]; plain MoCo 100 ep RFMiD +0.031 [+0.006, +0.058], Paraguay +0.041 [+0.016, +0.065], IDRiD
+  −0.016 [−0.056, +0.017]; plain MoCo 15 ep RFMiD +0.005 [−0.011, +0.023] (not significant), Paraguay **−0.043 [−0.064, −0.023]**.
+  So TRACE v1 beats ImageNet and the matched-length plain run, but not the short plain run.
+- **The camera is visible in coarse colour and light layout (9 Nov):** a clean probe on RFMiD's 3 cameras (same hospital; 5-fold
+  grouped CV) gives 0.990–0.998 for every encoder, ImageNet included, and 0.997–0.999 on normal eyes only (no disease to give it
+  away). Pixel diagnostics: a 16×16 thumbnail of the evaluation image identifies the camera at 0.995, still 0.990 with every photo
+  cut to the same outline (Kowa photos are flat-cut, h/w 0.83; both Topcons are full circles), and fine-detail energy alone at 0.959.
+  Camera *detectability* is therefore not a reachable target, and an encoder probe at ~1.0 does not show harm. **The camera claim
+  must be measured as a performance gap** (leave-one-camera-out, §19.7; new-site transfer), not as probe accuracy.
+- **But the camera does shape the feature map (9 Nov; scratchpad `camera_neighbours.py`):** on RFMiD (3,032 photos), the share of each
+  photo's 20 nearest neighbours (cosine, same-eye copies excluded) from its own camera, with chance 0.653, is: ImageNet 0.969, plain MoCo
+  15 ep 0.940, plain 100 ep 0.958, trace_v1 (ep 20) 0.921, **trace_v1 ep 100 0.868**. On normal eyes only it's 0.876–0.968, so this isn't
+  disease mix. When a diseased photo's neighbour comes from another camera, it shares a label as often as a same-camera neighbour does
+  (trace_v1 0.488 vs 0.491). TRACE's ep 20 → 100 drop is the first sign that the 80 mining epochs did change something, even though val-A
+  didn't move. **This risks the distance-based parts:** kNN OOD (§10.3) and "5 similar cases" retrieval are camera-driven, and a new
+  camera's photos will look unfamiliar. Measure the leave-one-camera-out gap and per-camera OOD before trusting them.
+- **384 px phase (`configs/pretrain_384.yaml`, `trace_v1_384`, started 9 Nov):** starts from the val-selected epoch-20 backbone
+  (`model.init_from`, new head, empty queue); batch 12, m 0.99963 (same ~23% key drift at K/B = 683), LR 0.03 × 12/256 with a
+  1-epoch warm-up, 20 epochs, ~30 img/s (≈ 4.4 h), 4.86 GB. **Mining off** (deviation from §19.4): epoch 20 was chosen before mining
+  started, so this continues the recipe that produced it (β = 2, no attraction) and measures resolution alone. The epoch-0 val-A
+  check reproduces epoch 20 (0.9194).
+- **384 px result (9 Nov; 4.3 h, 1 crash = CUDA out of memory at 13:31, probably another app taking GPU memory; resumed exactly):**
+  val-A linear/kNN by epoch: 0 0.919/0.842, 5 0.925/0.841, **10 0.928/0.846 (best → `trace_v1_384`)**, 15 0.924/0.851,
+  20 0.925/0.850. Test: RFMiD linear 0.917 [0.897, 0.935], kNN 0.838, Disease_Risk 0.977, IDRiD any-DR 0.871, referable 0.909,
+  5-grade 0.352, Paraguay 0.886, RFMiD 3-camera probe 0.995, same-camera neighbours 0.914. Paired bootstrap, trace_v1_384 minus:
+  trace_v1 RFMiD −0.006 [−0.019, +0.006], **Paraguay +0.027 [+0.015, +0.039]**; ImageNet RFMiD +0.032 [+0.011, +0.049], Paraguay
+  +0.023 [+0.001, +0.046]; plain 100 ep Paraguay +0.067 [+0.045, +0.090]; plain 15 ep RFMiD −0.001, Paraguay −0.016 [−0.035, +0.001].
+  So 384 px helps transfer to a new site and leaves RFMiD unchanged. It still doesn't beat the short plain run, and the gap to it
+  on Paraguay is now not significant (it was −0.043).
+- **One-photo demo, not a result (9 Nov):** an internet RP photo (Hamel 2006, Orphanet J Rare Dis, Wikimedia, CC BY 2.0) is not in our
+  data (best vessel match 0.23 over all 45,862 photos, mirrored too). Its cosine to JSIEC's 39 class means (gallery only, nothing
+  fitted) ranks RP **1st** for trace_v1_384 (0.918 vs BRVO 0.892), 2nd for plain MoCo 15 ep (CRVO first), and 30th for ImageNet. kNN
+  votes favour pathological myopia for all three (TRACE: myopia 29%, BRVO 19%, RP 17%). All three call it abnormal (p = 1.00). RFMiD
+  has no pigment label, so the top finding probes are ARMD, MYA and BRVO. The 10th-neighbour OOD check calls it *familiar* (0.914 vs
+  0.906), so a rare eye can pass the OOD gate; §10.3's referral can't be the only safety net.
+- **JSIEC few-shot** (`eval/fewshot.py`, `outputs/eval/fewshot.json`; 993 photos, 39 classes, support and query never the same eye,
+  5 seeds; balanced top-1, chance 0.026): prototype K = 1 / 5 / 10: trace_v1_384 **0.403 / 0.628 / 0.716**, plain 15 ep 0.384 / 0.611 / 0.679,
+  plain 100 ep 0.346 / 0.559 / 0.628, ImageNet 0.297 / 0.536 / 0.610. Logistic K = 1 / 5 / 10: 0.420 / 0.677 / 0.782 vs 0.415 / 0.669 / 0.764,
+  0.357 / 0.610 / 0.716, 0.337 / 0.620 / 0.713. TRACE is best in all 6 settings: +0.06 to +0.11 over ImageNet, +0.004 to +0.037 over plain
+  15 ep (seed intervals overlap with the latter). The logistic model's standardiser is fitted on 5,000 unlabelled pool photos: fitted on the
+  support photos, it inflated noise dimensions at K = 1 (the toy test caught it). RP top-1 at K = 5 / 10: TRACE 0.75 / 0.93, ImageNet
+  0.72 / 0.80; at K = 1 ImageNet is better on RP (0.57 vs 0.39).
+- **Disc / macula localiser** (`findings/localise.py`, §8.1; IDRiD landmarks mapped into processed space by `findings/landmarks.py`,
+  `data/idrid_landmarks.parquet`). Developed on IDRiD *train* landmarks only (IDRiD train already fits probes in our DR protocol), reported
+  once on IDRiD test. Disc = brighter than its surroundings at disc scale, 39 px inside the edge; fovea = darker than its surroundings,
+  1.8–3.2 DD from the disc, within 35° of horizontal on the photo-centre side; DD = 78 px (median disc–fovea distance 196 px / 2.5).
+  Each step's train numbers are in the module docstring. **IDRiD test (103): disc within 0.5 DD 99.0%, fovea 84.5% (within 1 DD 89.3%)**,
+  median errors 0.12 / 0.14 DD. By eye on 24 photos from 8 other sources: disc 23/24, macula ~18/24 (misses slide towards the darker rim,
+  e.g. EyePACS). Next: a weak-spot `loc_ok` flag so bad macula crops are skipped (§19.8), not used.
+- **Leave-one-camera-out** (`eval/leave_camera_out.py`, `outputs/eval/leave_camera_out.json`; RFMiD, in-domain training size-matched,
+  3 draws; linear C = 0.01). Linear macro-AUROC, in-domain → unseen camera (gap):
+  Kowa held out (128 test photos, 6 labels): trace_v1_384 0.940 → **0.921** (+0.019 [+0.006, +0.033]); plain 15 ep 0.917 → 0.903 (+0.014);
+  plain 100 ep 0.899 → 0.881 (+0.018); ImageNet 0.883 → 0.867 (+0.016).
+  Topcon OCT-2000 held out (438 test photos, 11 labels, only 308 training photos): trace_v1_384 0.879 → **0.858** (+0.021 [+0.001, +0.040]);
+  trace_v1_e100 +0.041; plain 15 ep 0.860 → 0.809 (**+0.051** [+0.031, +0.071]); plain 100 ep +0.049; ImageNet 0.815 → 0.796 (+0.019).
+  TRC-NW300 (73 photos, 2 labels): intervals too wide to read. Disease_Risk gaps are small and mixed. **So an unseen camera costs
+  ~0.02 AUROC; TRACE 384 has the best unseen-camera score on both readable cameras, and on OCT-2000 its gap is under half plain
+  MoCo's.** Not yet a head-to-head paired test of the gaps. kNN gaps are larger (Kowa +0.04 to +0.06 for the SSL encoders).
+  **Camera centring: rejected.** It lowers the same-camera neighbour share (trace_v1_384 0.908 → 0.814, chance 0.642) but doesn't
+  improve unseen-camera kNN: Kowa 0.880 → 0.887, OCT-2000 0.833 → 0.798. Camera means also carry each camera's disease mix.
+- **Two cheap probe ideas tested on val-A and rejected (10 Nov; trace_v1_384, 377 photos):** (1) Head2Toe-style multi-layer
+  features (average-pooled layer outputs, each block L2-normalised, concatenated): layer4 only 0.9278 (kNN 0.846); layer3+4 0.9293
+  (0.853); layer2+3+4 0.9275; all four 0.9277. The best gain, +0.0015, is far inside the noise of 377 photos. (2) Wider C grid
+  (0.0003–0.1): CV on train picks 0.003, val-A 0.9263 vs 0.9278 at 0.01. So the §19.7 grid and the 2048-d feature stay.
+- **Short-schedule retrain started (10 Nov; `configs/pretrain_short.yaml`, `trace_s20`):** trace_v1's first-20-epoch recipe (β = 2, no
+  attraction) with the cosine schedule finishing at epoch 20: the fair match for the 15-epoch plain run, and the reference row for two
+  literature ideas to test as ablations (Fourier low-frequency amplitude mixing across cameras; cross-source nearest-neighbour positives).
+- **Short-schedule result (10 Nov; 1 h 20 min, no crash): no gain.** val-A linear/kNN by epoch: 5 0.916/0.808, 10 0.914/0.814,
+  15 0.913/0.832, 20 0.913/0.838. Below trace_v1's epoch 20 (0.919/0.842, long schedule) and level with plain 15 ep (0.914/0.833).
+  So the "learning rate never decayed" guess was wrong. Every SSL run now sits at val-A 0.91–0.93, with run-to-run differences
+  about the size of the noise on 377 photos: the linear probe on RFMiD is saturated for this backbone and pool.
+- **Encoder frozen (10 Nov):** `trace_v1_384` is final. Its weights and features are read-only; Phase 4 works on a byte-identical copy
+  named `trace_v2` (`checkpoints/trace_v2/encoder.pt`, `features/trace_v2/`). Nothing in Phase 4 changes encoder weights.
+- **Crop features** (`findings/crops.py`): disc (2 DD) and macula (3 DD) crops cut from the whole photo after steps 7–8 at 512 px,
+  resized to 384 px; 6,657 labelled photos, no hard localisation failure. On IDRiD test the disc crop contains the true disc centre
+  in 99.0% of photos and the macula crop the fovea in 93.2%. A confidence score for crops was tried and dropped (same for right and
+  wrong guesses), so `loc_ok` marks hard failures only.
+- **Finding detectors** (`findings/probes.py`, `outputs/eval/findings_trace_v2.json`, `artifacts/trace_v2/findings.joblib`; calibrated
+  probabilities in `features/trace_v2/<bucket>_findings.parquet`). 2,193 head-training photos, 14 detectors + 6 prototypes.
+  **Three deviations from §8, with reasons:** (1) scored by out-of-fold AUROC on head-training (5 folds, grouped by eye) as well as
+  val-A, and Platt + reliability use OOF + val-A pooled, because val-A has 2–13 positives for most findings (haemorrhage 5, CWS 4).
+  (2) **Input routed by anatomy, not 6,144 for all:** all three views for every finding gave no gain (OOF 0.9169 vs 0.9169), but the
+  matching crop helps the finding that lives there (logistic OOF: disc pallor 0.739 → 0.786, disc edema 0.961 → 0.973; macular scar
+  0.866 → 0.907 on the macula crop alone, drusen 0.862 → 0.850). Rule fixed by the ontology's location: disc findings read global +
+  disc crop, all others global; macula crop unused (mixed). (3) Reliability floor 0.60 for "off" (a judgment call).
+  Result (routed + MLP, OOF macro 0.920 vs global 0.917; logistic 0.918): disc_edema 0.976, haemorrhage 0.961, retinal_traction
+  0.957, tessellation 0.957, media_haze 0.952, laser_scars 0.947, hard_exudates 0.937, cotton_wool_spots 0.932, macular_edema 0.921,
+  disc_cupping 0.918, tilted_disc 0.886 (prototype), rpe_changes 0.862, tortuous_vessels 0.857 (prototype), drusen 0.854,
+  macular_scar 0.850, microaneurysm 0.834 (prototype, 5 positives), disc_pallor 0.812, choroidal_folds 0.783; r_f = 0.5 for
+  macular_hole 0.696 and optociliary_shunt 0.654. **Go / no-go: every finding AION and CRVO need is ≥ 0.81, so both go through the graph.**
+- **Sources read for edges (10 Nov):** EyeWiki NAION (reviewed 10 Aug 2026) and CRVO (edited 9 Nov 2026). The NAION page carries a notice
+  against copying its content into AI programs: store no EyeWiki text; cite the primary studies it draws on, pending Nithin's decision.
+  AION is time-dependent (acute = disc edema, later = pallor), so the graph must not require both at once.
+- **Knowledge graph, zero-shot: a negative result (10 Nov; `graph/edges.csv`, `graph/build.py`, `graph/score.py`,
+  `eval/leave_disease_out.py`, `outputs/eval/leave_disease_out_trace_v2*.json`).** 12 cited `draft` edges (AION 6, CRVO 6; primary
+  papers with DOIs where PubMed abstracts supported the fact, EyeWiki in our own words otherwise). 9 candidate diseases (7 data
+  diseases with ≥ 5 head-training photos, edges from out-of-fold detector outputs; AION, CRVO from literature), π_min 0.005 (val-A
+  false alarm 0%). **RFMiD labels the disease, not its signs** (1 of 30 AION photos also labelled disc_edema; 3 of 57 CRVO photos
+  labelled haemorrhage), so data edges use detector outputs, and the planned oracle test is impossible.
+  Version 1 (literature μ used directly) and version 2 (μ put on the detector's scale: μ·sens + (1 − μ)·fpr, from head-training only)
+  both give **top-1 0 of 30 AION and 0 of 78 CRVO** (top-3: AION 0.30 → 0.33, CRVO 0.00); almost all are called normal. Stopped there:
+  further changes would be tuned on the held-out photos. Image route on the same photos (cosine to class means, K other-eye photos,
+  5 seeds): **AION K = 1 top-1 0.087 / top-3 0.200, K = 5 0.407 / 0.740; CRVO K = 1 0.274 / 0.546, K = 5 0.662 / 0.897.**
+  Why (mean detector output, diagnostic only): AION photos 0.454 disc_edema vs normal 0.020, so the finding is seen, but one finding
+  at q ≈ 0.45 cannot beat a ~40× prior gap to normal. CRVO photos 0.054 haemorrhage (BRVO 0.064, normal 0.003), 0.063 disc edema,
+  0.011 tortuous vessels: the detectors, trained on RFMiD's HR / PRH labels, barely respond to CRVO's signs.
+  **Decision: rare diseases go through the image prototype bank (few photos); the graph stays as the explanation layer (evidence
+  for / against from the 18 good detectors), and the zero-shot failure goes on the honest-failure slide.** Phase 4's "done when"
+  (leave-disease-out reported vs image-only) is met.
+- **Disease bank (step 7; `graph/bank.py`, `artifacts/trace_v2/bank.npz`, `eval/rare_bank.py`, `outputs/eval/rare_bank.json`):** one
+  prototype (unit mean of global features) per disease; adding a disease = adding one vector. 10 diseases: 7 common from head
+  training, AION 30 / CRVO 56 / RP 14 from their RFMiD + RFMiD 2.0 photos; JSIEC never enters it. Top-1 / top-3 among 10 (chance
+  0.10 / 0.30), trace_v2 vs plain 15 ep vs ImageNet. **JSIEC (new dataset, never in the bank):** CRVO (22) **1.00** / 1.00 vs 0.91 /
+  1.00 vs 0.91 / 0.95; RP (22) 0.86 / 1.00 vs 0.59 / 0.82 vs **1.00** / 1.00; DR (103) **0.56** vs 0.46 vs 0.17; BRVO (44) **0.50** /
+  0.95 vs 0.48 / 0.91 vs 0.11 / 0.55. **Leave one eye out (RFMiD):** AION 0.50 / 0.73 vs 0.47 / 0.73 vs 0.43 / 0.73; CRVO 0.73 / 0.91 vs
+  0.71 / 0.91 vs 0.64 / 0.73; RP 0.57 / 0.86 vs 0.43 / 0.71 vs 0.71 / 0.86. RP is the one place ImageNet matches or beats us (its
+  pigment is a colour cue). **False alarms:** plain cosine ranking calls 17% of val-A photos (none rare) a rare disease. A rare disease
+  is now only *called* when it beats the best common disease by a margin set on val-A for a 5% false alarm (τ = 0.016 for trace_v2).
+  Share still called at that margin, trace_v2: JSIEC CRVO 1.00, RP 0.45; RFMiD AION 0.37, CRVO 0.54, RP 0.43. Fewer calls, but
+  each is trustworthy; the rest go to the short-list / refer path (Phase 5).
+- **Disease × finding map** (`scripts/disease_finding_map.py`, `outputs/figures/disease_finding_map.png`): mean detector output per
+  disease (common: head-training out-of-fold; rare: held-out photos). AION's row lights up on disc edema (0.45); CRVO's row is nearly
+  blank (haemorrhage 0.05), which is the zero-shot failure in one picture; myopia shows tessellation 0.31 and disc cupping 0.23.
+**Phase 5, trust layer (11 Nov; `trust/`, `eval/trust_eval.py`, `eval/site_onboarding.py`, `eval/quality_eval.py`, `eval/decision_eval.py`;
+artifacts in `artifacts/trace_v2/{trust,quality}.joblib`; results in `outputs/eval/{trust,site_onboarding,quality,decision}_trace_v2*.json`):**
+- **Maths verified first** (`trust/calibrate.py`, `trust/conformal.py`, `tests/test_trust.py`): §16 ECE bin 0.02 and the §10.4 conformal example
+  (k = 9, q̂ = 0.70, set {AION, vein occlusion}) reproduce exactly; temperature recovers a known 3× overconfidence; coverage holds on
+  exchangeable toy data.
+- **Classifier** (`trust/classifier.py`): logistic on the frozen global feature beat prototypes on val-A (6 classes: accuracy 0.882 vs 0.706,
+  log-loss 0.301 vs 0.970, ECE 0.032 vs 0.247). **A 7th class `other_abnormal` was added** ("abnormal, none of the 6": findings, no disease
+  label): 43% of val-A photos (162 / 377) are of that kind, and the 6-class model called 58 of them normal (missed abnormalities) and the rest
+  DR / myopia / …; on test the full pipeline then gave 30.9% confident wrong diagnoses. With 7 classes (val-A accuracy 0.727, T 1.103,
+  ECE 0.060), RFMiD + RFMiD 2.0 test on the real mix (732 photos): accuracy 0.796, ECE 0.029, **conformal coverage 0.906** (target 0.90),
+  mean set 1.39, 65% single answers; per camera OCT-2000 0.895, Kowa 0.943, TRC-NW300 0.918, RFMiD 2.0 512 0.923, 1504 0.722 (18 photos).
+  Risk–coverage: error 0.204 at 100% coverage, 0.137 at 80%, 0.085 at 50%; AURC 0.087 (6-class, clean photos only: 0.116 → 0.032 at
+  80%, AURC 0.020). Conformal: only OCT-2000 has ≥ 50 val-B photos (q̂ 0.827); others and unseen cameras use the conservative 0.833.
+- **New camera breaks conformal, onboarding restores it** (Paraguay, ZEISS VISUCAM 500; "no DR signs" taken as normal, stated): default
+  threshold coverage 0.575 (6-class version 0.673); with Paraguay's own q̂ from ~100 local photos (20 eye-grouped splits) **0.895 [0.836,
+  0.946]**, but sets grow to 3.6 diseases (6-class: 2.4): the classifier is unsure there, so the promise is kept by widening, i.e. more
+  short-lists and referrals, not confident errors. DR coverage at other sites (7-class, default threshold): IDRiD 0.732, JSIEC 0.748,
+  Paraguay 0.225.
+- **OOD** (`trust/ood.py`; FAISS cosine, 10th neighbour over pool + head training; 95th pct of val-A, per camera for groups ≥ 50): RFMiD test
+  flagged 0.058 (target 0.05); **Paraguay flagged 0.215** (the camera itself looks unfamiliar); 13 JSIEC classes unknown to TRACE (judgment-call
+  list in `eval/trust_eval.py: UNKNOWN`, 219 photos): AUROC 0.823, but FPR@95%TPR 0.662: most unknown fundus diseases still look familiar.
+  **Non-fundus** (`scripts/cifar_ood_features.py`; 500 CIFAR-10 test images, binary batch parsed as bytes, archive MD5 checked against the
+  published c32a1d4…7530, in `raw/ood_cifar10/`): the retina finder rejects 30.2% before the encoder; scoring all 500 anyway (whole image
+  treated as retina): **AUROC 1.000, FPR@95%TPR 0.000**. A non-fundus image never passes as a familiar eye.
+- **Quality gate** (`trust/quality.py`, `eval/quality_eval.py`; logistic on frozen features, EyeQ grades, split by patient, threshold for 90%
+  reject recall on training patients). EyeQ only: held-out EyePACS reject AUROC 0.991, rejects caught 0.878, good sent back 0.002; shortcut
+  check on 320 graded photos that never entered the pool (rejects were never in the pool, goods were): AUROC 0.989, caught 0.919, good 0.000,
+  so no "seen in pretraining" shortcut. **But it sent back 34–67% of doctor-graded photos from other cameras** (RFMiD 0.344, RFMiD 2.0 0.608,
+  IDRiD 0.100, Paraguay 0.671, JSIEC 0.419). Version 2 (deployed): RFMiD + RFMiD 2.0 head-training photos added as readable ("a doctor
+  diagnosed from it"): rejects caught 0.888, false retakes RFMiD 0.036, RFMiD 2.0 0.111, IDRiD 0.004, JSIEC 0.200, **Paraguay 0.555**;
+  onboarding the gate with 100 Paraguay photos: Paraguay 0.278, rejects still 0.888. Trade-off: rejects come from EyePACS only.
+  Bug caught by the unit test: sklearn orders classes alphabetically (good, reject, usable), so the reject column was read by position wrongly.
+- **Decision rule** (`trust/decide.py`): retake → unfamiliar → rare-bank call (margin τ 0.013 on val-A, bank built without any test photo)
+  → {other_abnormal} alone = refer → one disease = diagnose → 2–3 = short-list → else refer. **Disagreement flag (§10.6) dropped:** on
+  val-A, large-gap diagnoses were as accurate as the rest (0.931 vs 0.919). Full pipeline (`eval/decision_eval.py`):
+  RFMiD + RFMiD 2.0 test (787): diagnose 0.34 / short-list 0.31 / refer 0.30 / retake 0.05; diagnoses right 0.903; **confident wrong 0.033**
+  (6-class: 0.309); short-lists hold the truth 0.84. Rare test photos (63, RFMiD test bucket + JSIEC CRVO / RP): refer 0.79, **confident
+  wrong 0.000**, referrals naming the true rare disease 0.50. JSIEC unknown diseases (219): confident wrong 0.078 (6-class 0.361).
+  Paraguay (1,208): confident wrong 0.020, diagnoses right 0.925, but retake 0.55 (the quality gate at an unseen camera).
 - **Compute plan with real timings:** plain MoCo 100 epochs ≈ 5 h. TRACE (multi-crop, artifacts) **measured 84 img/s → 100 epochs ≈ 7.4 h**
   (was estimated at 6.3 h);
   384 px phase (20 epochs at ~35 img/s) ≈ 3.6 h; ablation ladder (10k photos, 30 epochs) ≈ 50 min a run. About 21 GPU-hours for the

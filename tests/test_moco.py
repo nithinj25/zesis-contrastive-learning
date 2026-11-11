@@ -156,3 +156,17 @@ def test_locals_never_mined_but_beta_applies():
     lo1, _ = multicrop_loss(q1, q2, k1, k2, ql, src, queue, qsrc, kth, mine=False, beta=1.0)
     lo2, _ = multicrop_loss(q1, q2, k1, k2, ql, src, queue, qsrc, kth, mine=False, beta=2.0)
     assert lo2 > lo1  # same-source negatives weigh more on every pair, locals included
+
+
+def test_load_backbone_sets_both_encoders():
+    import torch
+
+    from encoder.moco import MoCo
+
+    src = MoCo("random", dim=8, K=6).q_enc.backbone.state_dict()
+    mo = MoCo("random", dim=8, K=6)
+    mo.load_backbone(src)
+    for name, w in src.items():
+        assert torch.equal(mo.q_enc.backbone.state_dict()[name], w) and torch.equal(mo.k_enc.backbone.state_dict()[name], w)
+    for pq, pk in zip(mo.q_enc.head.parameters(), mo.k_enc.head.parameters()):
+        assert torch.equal(pq, pk)  # heads still match: the key encoder starts as an exact copy

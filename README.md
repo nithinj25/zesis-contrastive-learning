@@ -7,7 +7,7 @@ eye doctors use to find diabetic retinopathy, glaucoma, vein blockages and many 
 for the **ZEISS India Campus Hackathon "Beyond Code 2026", Theme 2: Contrastive Learning for Rare Eye Diseases**.
 
 **Status (8 Nov 2026):** the data pipeline and the baselines are done. The TRACE encoder is built and its
-100-epoch training run is underway. The reasoning, trust layer and demo come next. See [Where we are](#5-where-we-are).
+first 100-epoch run is finished and evaluated. The reasoning, trust layer and demo come next. See [Where we are](#5-where-we-are).
 
 ---
 
@@ -173,7 +173,7 @@ attracted pairs shared a finding or disease **4.9–5.4× more often than chance
 | 0. Setup | Repo, configs, tests | ✅ Done |
 | 1. Data | Ingest 8 datasets, dedupe, preprocess, label mapping, leak-free splits | ✅ Done (45,864 photos) |
 | 2. Baselines | ImageNet ResNet-50, plain MoCo v2 (15 and 100 epochs), evaluation suite | ✅ Done |
-| 3. TRACE encoder | Retina-safe views, artifact simulator, multi-crop, cross-source mining, mining monitor | 🟡 Built and tested; 100-epoch run underway (epoch 12 of 100) |
+| 3. TRACE encoder | Retina-safe views, artifact simulator, multi-crop, cross-source mining, mining monitor | 🟡 Built; first full run done (beats baselines on RFMiD, camera bias not yet reduced); ablations next |
 | 4. Findings + graph | Disc/macula crops, finding detectors, knowledge graph, evidence scorer | ⏳ Next |
 | 5. Trust | Quality gate, calibration, OOD, per-camera conformal sets, decision rule | ⏳ Planned |
 | 6. Package | Gradio demo, UMAPs, model card | ⏳ Planned |
@@ -187,30 +187,41 @@ attracted pairs shared a finding or disease **4.9–5.4× more often than chance
 All numbers come from real runs. "Frozen" means the encoder is never fine-tuned; a small linear classifier is
 trained on top of its fingerprints.
 
-### Baselines (held-out test sets)
+### Encoders on the held-out test sets
 
 | Encoder | RFMiD linear macro-AUROC | RFMiD kNN | IDRiD any-DR | Paraguay any-DR (unseen site, ZEISS camera) | Camera probe ↓ |
 |---|---|---|---|---|---|
 | ImageNet ResNet-50 | 0.885 | 0.759 | 0.865 | 0.863 | 0.971 |
-| Plain MoCo v2, 15 epochs | **0.918** | **0.851** | 0.859 | **0.903** | 0.961 |
+| Plain MoCo v2, 15 epochs | 0.918 | **0.851** | 0.859 | **0.903** | **0.961** |
 | Plain MoCo v2, 100 epochs | 0.892 | 0.819 | **0.887** | 0.819 | 0.969 |
+| **TRACE v1, epoch 20 (chosen on val-A)** | **0.922** | 0.829 | 0.871 | 0.860 | 0.970 |
+| TRACE v1, epoch 100 | 0.905 | 0.807 | 0.862 | 0.827 | 0.978 |
 
 What the table shows:
-- Self-supervised training on fundus photos **beats ImageNet**, and the gain shows up mostly in the first epochs.
-- **Longer plain training isn't better.** The training epoch is chosen on a validation split (val-A), never on test.
-- **The camera probe tells us how strongly the fingerprint reveals which camera took the photo.** It stays near
-  0.97 (chance is 0.14) for every baseline. Plain contrastive learning does **not** remove camera bias. That gap
-  is what TRACE targets, and it is the comparison we will report.
+- Self-supervised training on fundus photos **beats ImageNet**, and most of the gain comes in the first epochs.
+- **TRACE v1 has the best RFMiD score (0.922, 95% CI 0.906–0.936)**, but the intervals overlap with plain MoCo's,
+  so it isn't proven better yet. A paired bootstrap on the same test photos comes next.
+- **Longer training isn't better**, for plain MoCo or for TRACE. The epoch is always chosen on the validation split
+  (val-A), never on test. For TRACE, val-A picked epoch 20, which is **just before cross-source mining switched on**,
+  so the best TRACE encoder so far comes from the retina-safe views, artifacts and multi-crop alone. Whether mining
+  helps is the next experiment (the ablation ladder).
+- **The camera probe tells us how strongly the fingerprint reveals which source a photo came from.** It stays near
+  0.97 (chance is 0.14) for **every** encoder, TRACE included. Our 7 sources also differ in country and disease mix,
+  so this probe may measure more than the camera. A cleaner test (3 cameras inside RFMiD, same hospital) comes next.
 
-**TRACE encoder (in progress), val-A linear macro-AUROC:**
+**TRACE v1 during training** (val-A, used only to choose the epoch):
 
-| Epoch | Score |
-|---|---|
-| 0 | 0.883 |
-| 5 | 0.916 |
-| 10 | 0.917 |
+| Epoch | Linear | kNN |
+|---|---|---|
+| 0 (ImageNet start) | 0.883 | 0.787 |
+| 10 | 0.917 | 0.815 |
+| **20 (mining starts after this check)** | **0.919** | 0.842 |
+| 40 | 0.914 | 0.843 |
+| 60 | 0.914 | 0.833 |
+| 100 | 0.914 | 0.831 |
 
-Plain MoCo's best on the same split was 0.914. Mining only starts at epoch 20, so the real test comes later.
+Mining stayed healthy: about 3 attracted keys per photo, attracted pairs share a finding **4.7–5.6× more often than
+chance**, no same-eye pairs, and no collapse.
 
 ### Preprocessing removes camera signal but keeps the biology
 A simple classifier guessing the source dataset from photo statistics (4 training datasets, chance 0.25) scores:

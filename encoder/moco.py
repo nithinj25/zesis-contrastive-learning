@@ -42,6 +42,13 @@ class MoCo(nn.Module):
         self.K, self.m, self.knn, self.shuffle_chunks = K, m, knn, shuffle_chunks
 
     @torch.no_grad()
+    def load_backbone(self, state_dict: dict):
+        """Start both encoders from saved backbone weights (e.g. a val-selected encoder_best.pt). The projection
+        head stays as initialised, identical in the query and key encoders, as at the start of any MoCo run."""
+        self.q_enc.backbone.load_state_dict(state_dict)
+        self.k_enc.backbone.load_state_dict(state_dict)
+
+    @torch.no_grad()
     def momentum_update(self):
         for pq, pk in zip(self.q_enc.parameters(), self.k_enc.parameters()):
             pk.mul_(self.m).add_(pq.detach(), alpha=1 - self.m)

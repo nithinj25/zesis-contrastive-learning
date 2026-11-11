@@ -1,0 +1,13 @@
+# Short-schedule TRACE (decision log, 10 Nov): the same recipe as trace_v1's first 20 epochs (retina views,
+# artifacts, multi-crop, beta = 2, no attraction), but with a cosine schedule that finishes at epoch 20.
+# Why: plain MoCo at 15 epochs beat plain at 100, and trace_v1's best checkpoint was epoch 20 of a 100-epoch
+# schedule, where the learning rate had barely decayed. This is the fair match for the 15-epoch plain run and
+# the reference row for the new ablations (Fourier camera mixing, cross-source nearest-neighbour positives).
+defaults:
+  - pretrain
+  - _self_
+
+encoder_name: trace_s20
+mining: {enabled: false}
+optim: {epochs: 20, warmup_epochs: 1}
+train: {workers: 8}
