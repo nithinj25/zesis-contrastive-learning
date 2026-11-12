@@ -113,6 +113,7 @@ def jsiec(meta: pd.DataFrame, name: str):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("names", nargs="+")
+    ap.add_argument("--out", default="outputs/eval/fewshot.json", help="result file (ablation runs write elsewhere)")
     args = ap.parse_args()
     meta = pd.read_parquet("data/meta.parquet")
     result = {}
@@ -130,5 +131,5 @@ if __name__ == "__main__":
                                  for c in RARE if c in r["per_class"])
                 print(f"  {n:16s} top-1 {r['top1']:.3f} [{r['top1_ci95'][0]:.3f}, {r['top1_ci95'][1]:.3f}]  "
                       f"top-5 {r['top5']:.3f}   | {rare}")
-    os.makedirs("outputs/eval", exist_ok=True)
-    json.dump(result, open("outputs/eval/fewshot.json", "w"), indent=1)
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    json.dump(result, open(args.out, "w"), indent=1)

@@ -81,7 +81,8 @@ def save_ckpt(path: str, model, opt, scaler, epoch: int, step: int, cfg, epoch_d
     torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "scaler": scaler.state_dict(),
                 "epoch": epoch, "global_step": step, "epoch_done": epoch_done, "config": OmegaConf.to_container(cfg, resolve=True),
                 "rng": {"python": random.getstate(), "numpy": np.random.get_state(), "torch": torch.get_rng_state(),
-                        "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None}}, path)
+                        "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None}}, path + ".tmp")
+    os.replace(path + ".tmp", path)  # atomic: a stop mid-save never leaves a half-written last.pt
 
 
 @hydra.main(config_path="../configs", config_name="pretrain", version_base=None)
@@ -102,7 +103,10 @@ def main(cfg: DictConfig) -> None:
     torch.cuda.set_per_process_memory_fraction(cfg.train.mem_fraction)  # Windows pages instead of OOM otherwise
 
     meta = pd.read_parquet(cfg.data.meta)
-    rows = meta[meta.in_pool].reset_index(drop=True)
+    rows = meta[meta.in_pool]
+    if cfg.data.get("pool_ids"):  # a subset of the pool, e.g. the ablation ladder's 10k (scripts/ablation_pool.py)
+        rows = rows[rows.image_id.isin(set(pd.read_csv(cfg.data.pool_ids).image_id))]
+    rows = rows.reset_index(drop=True)
     # the loss's source IDs (section 5.5: mine_source merges groups that may be one camera); step 7 keeps `source`
     mine_src = rows.mine_source if "mine_source" in rows.columns else rows.source
     source_ids = {s: i for i, s in enumerate(sorted(mine_src.unique()))}

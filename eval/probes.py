@@ -164,6 +164,7 @@ def camera_tasks(meta, feats, X, per_group: int = 400, seed: int = 0) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", required=True)
+    ap.add_argument("--out_dir", default="outputs/eval", help="per-encoder JSON + summary CSV go here")
     args = ap.parse_args()
     t0 = time.time()
     meta = pd.read_parquet("data/meta.parquet")
@@ -173,13 +174,13 @@ if __name__ == "__main__":
     for part in (rfmid_tasks, dr_tasks, camera_tasks):
         res.update(part(meta, feats, X))
         print(f"{part.__name__} done ({time.time() - t0:.0f} s)")
-    os.makedirs("outputs/eval", exist_ok=True)
-    json.dump(res, open(f"outputs/eval/{args.name}.json", "w"), indent=1)
+    os.makedirs(args.out_dir, exist_ok=True)
+    json.dump(res, open(os.path.join(args.out_dir, f"{args.name}.json"), "w"), indent=1)
     keys = ["rfmid_linear_macro_auroc", "rfmid_knn_macro_auroc", "rfmid_disease_risk_auroc", "idrid_any_dr_auroc",
             "idrid_referable_dr_auroc", "idrid_5grade_balanced_acc", "paraguay_any_dr_auroc_from_idrid",
             "camera_probe_source_bal_acc", "camera_probe_dataset_bal_acc"]
     row = pd.DataFrame([{"encoder": args.name, **{k: round(res[k], 4) for k in keys}}])
-    path = "outputs/eval/baselines.csv"
+    path = os.path.join(args.out_dir, "baselines.csv")
     row.to_csv(path, mode="a", header=not os.path.exists(path), index=False)
     ci = res["rfmid_linear_macro_auroc_ci95"]
     print(f"\n{args.name}: RFMiD linear macro-AUROC {res['rfmid_linear_macro_auroc']:.3f} [{ci[0]:.3f}, {ci[1]:.3f}] over "

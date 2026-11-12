@@ -1,0 +1,14 @@
+# Short ablation ladder (CLAUDE.md section 19.15): ~10k photos, 30 epochs at 224 px, queue 4,096, mining warm-up
+# 6 epochs. Defaults here = full TRACE; each rung switches parts off with command-line overrides
+# (scripts/run_queue.py, ABLATION). Label every result "short budget".
+defaults:
+  - pretrain
+  - _self_
+
+encoder_name: abl_full
+data: {pool_ids: data/ablation_pool.csv}
+moco: {K: 4096}
+mining: {warmup_epochs: 6}
+optim: {epochs: 30, warmup_epochs: 2}
+eval_every: 10
+train: {workers: 8}

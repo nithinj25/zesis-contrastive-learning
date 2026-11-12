@@ -1556,6 +1556,37 @@ artifacts in `artifacts/trace_v2/{trust,quality}.joblib`; results in `outputs/ev
   (6-class: 0.309); short-lists hold the truth 0.84. Rare test photos (63, RFMiD test bucket + JSIEC CRVO / RP): refer 0.79, **confident
   wrong 0.000**, referrals naming the true rare disease 0.50. JSIEC unknown diseases (219): confident wrong 0.078 (6-class 0.361).
   Paraguay (1,208): confident wrong 0.020, diagnoses right 0.925, but retake 0.55 (the quality gate at an unseen camera).
+- **Distribution calibration for rare diseases (11 Nov; `graph/dist_calib.py`, `eval/dist_calib_eval.py`,
+  `outputs/eval/dist_calib_trace_v2.json`; Yang et al., ICLR 2021, arXiv 2101.06395).** Each rare photo borrows the spread of its
+  nearest common disease(s) to make ~500 synthetic feature points; a logistic model is trained on real + synthetic. Two departures:
+  alpha on the diagonal only; covariance never formed (exact draws via R^T g). **Chosen on a practice task, not on rare photos:**
+  myopia / ARMD / BRVO / CSR each made "rare" (K = 5 or 14 photos, 5 seeds), share caught at 5% val-A false alarm: prototype
+  0.61 / 0.67, logistic (real only, balanced) 0.68 / 0.77, logistic + DC 0.71 / 0.80. Paired over the 20 tasks: DC − logistic
+  +0.03 [+0.01, +0.05], DC − prototype +0.10 / +0.13. All 5 DC variants within ~0.01 of each other; the pick (`dc_spread_k1`:
+  keep the photo's own position, borrow the nearest disease's spread) is by a hair. Myopia is the one class where prototypes win.
+  **Final run, once** (RFMiD 5 folds by eye; JSIEC with all rare photos as support), called at 5% false alarm, prototype → logistic
+  → DC: AION 0.37 → 0.43 → 0.47 (n 30), CRVO 0.57 → 0.77 → 0.79 (56), RP 0.36 → 0.71 → 0.79 (14); JSIEC CRVO 1.00 → 1.00 → 0.95 (22),
+  **JSIEC RP 0.50 → 0.86 → 0.95** (22). Top-1 among 10: AION 0.47 → 0.63, CRVO 0.75 → 0.89, RP 0.64 → 0.86, JSIEC RP 0.86 → 1.00.
+  As in the practice task, most of the gain is from logistic over cosine; DC adds a little on top. Small n (RP 14, JSIEC 22 each).
+  Not yet wired into `eval/decision_eval.py` (still the cosine bank).
+- **Ablation ladder started (11 Nov, 23:23; `scripts/ablation_pool.py`, `configs/ablation.yaml`, `scripts/run_queue.py`).** Pool
+  `data/ablation_pool.csv`: all non-EyePACS pool photos (APTOS 3,387, RFMiD 1,735, RFMiD 2.0 460) + 4,418 random EyePACS = 10,000,
+  7 mining sources; K 4,096, 30 epochs, mining warm-up 6, val-A every 10 epochs. 8 runs, plain and full first: r0 plain, r5 full,
+  r1 + retina views, r2 + artifacts, r3 + multi-crop, r4 + β = 2, then seed-1 repeats of r0 and r5 (noise). Every rung is read at
+  its final epoch (no checkpoint picking); features cached after training. Naive similarity masking (§11) not run: it needs
+  same-source neighbour lists the queue doesn't store. Estimate ~7 h training + ~1 h features. Log: `outputs/ablation/queue.log`.
+- **Ablation ladder result (12 Nov; `scripts/ablation_eval.py`, `outputs/ablation/table.md`; short budget, final epoch,
+  seed noise = max |seed 0 − seed 1| over the plain and full repeats).** Read only steps larger than that noise.
+  **Retina-safe views carry the camera gain:** unseen camera OCT-2000 0.819 → 0.848 (gap 0.043 → 0.017; noise 0.011),
+  Kowa 0.883 → 0.932 (noise 0.006), same-camera neighbours 0.941 → 0.920, Paraguay 0.910 → 0.935 (paired +0.025
+  [+0.012, +0.038]); RFMiD kNN falls 0.848 → 0.824. Artifacts: RFMiD linear 0.919 → 0.924, but Paraguay 0.935 → 0.848
+  (unexplained; one seed, and the next rung is back at 0.923). Multi-crop: JSIEC 5-shot prototype 0.635 → 0.594.
+  β = 2: same-camera neighbours 0.929 → 0.907, nothing else moves. **Mining is a trade-off:** same-camera neighbours
+  0.907 → 0.868 (both seeds), the largest camera-mixing step, but JSIEC 5-shot prototype 0.600 → 0.520, logistic
+  0.674 → 0.630, IDRiD any-DR 0.880 → 0.845 (paired −0.035 [−0.069, −0.005]), unseen Kowa 0.928 → 0.906. RFMiD linear
+  is flat throughout (0.915–0.924), the 3-camera probe ~0.99 for all. So mining mixes cameras in neighbour space at the
+  cost of few-shot and retrieval accuracy; the headline `trace_v1_384` was selected at epoch 20, before mining
+  started, which fits this. Not yet tested: Medha's lesion-guided crops and camera-balanced sampling as rungs.
 - **Compute plan with real timings:** plain MoCo 100 epochs ≈ 5 h. TRACE (multi-crop, artifacts) **measured 84 img/s → 100 epochs ≈ 7.4 h**
   (was estimated at 6.3 h);
   384 px phase (20 epochs at ~35 img/s) ≈ 3.6 h; ablation ladder (10k photos, 30 epochs) ≈ 50 min a run. About 21 GPU-hours for the

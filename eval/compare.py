@@ -101,6 +101,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("names", nargs="+", help="first = the encoder compared against every other")
     ap.add_argument("--n", type=int, default=1000)
+    ap.add_argument("--out", default="outputs/eval/compare.json", help="result file (ablation runs write elsewhere)")
     args = ap.parse_args()
     meta = pd.read_parquet("data/meta.parquet")
     scores = {n: task_scores(meta, n) for n in args.names}
@@ -120,5 +121,5 @@ if __name__ == "__main__":
             result["paired"][f"{a}_vs_{b}_{task}"] = r
             print(f"  vs {b:16s} {task:16s} {r['a']:.3f} vs {r['b']:.3f}: diff {r['diff']:+.3f} "
                   f"[{r['ci95'][0]:+.3f}, {r['ci95'][1]:+.3f}], p(not better) {r['p_not_better']:.3f}")
-    os.makedirs("outputs/eval", exist_ok=True)
-    json.dump(result, open("outputs/eval/compare.json", "w"), indent=1)
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    json.dump(result, open(args.out, "w"), indent=1)

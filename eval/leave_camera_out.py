@@ -118,14 +118,15 @@ def run(meta: pd.DataFrame, name: str) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("names", nargs="+")
+    ap.add_argument("--out", default="outputs/eval/leave_camera_out.json", help="result file (ablation runs write elsewhere)")
     args = ap.parse_args()
     meta = pd.read_parquet("data/meta.parquet")
     result = {}
     for n in args.names:
         result[n] = run(meta, n)
         print(f"{n} done", flush=True)
-    os.makedirs("outputs/eval", exist_ok=True)
-    json.dump(result, open("outputs/eval/leave_camera_out.json", "w"), indent=1)
+    os.makedirs(os.path.dirname(args.out), exist_ok=True)
+    json.dump(result, open(args.out, "w"), indent=1)
 
     def fmt(g):
         return f"{g['in']:.3f} vs {g['out']:.3f} gap {g['gap']:+.3f} [{g['ci95'][0]:+.3f}, {g['ci95'][1]:+.3f}]"
