@@ -78,12 +78,24 @@ def fit_predict_lr(Xtr, Ytr, Xte, C: float) -> np.ndarray:
 
 
 def fit_predict_mlp(Xtr, Ytr, Xte, epochs: int = 60, seed: int = 0) -> np.ndarray:
+    sc, net = fit_mlp(Xtr, Ytr, epochs, seed)
+    return predict_mlp(sc, net, Xte)
+
+
+def predict_mlp(sc, net, Xte) -> np.ndarray:
+    dev = next(net.parameters()).device
+    net.eval()
+    with torch.no_grad():
+        return net(torch.tensor(sc.transform(Xte), dtype=torch.float32, device=dev)).cpu().numpy()
+
+
+def fit_mlp(Xtr, Ytr, epochs: int = 60, seed: int = 0):
+    """-> (StandardScaler, trained MLP 'in -> 512 -> n findings'), the detector model of section 8.2."""
     torch.manual_seed(seed)
     dev = "cuda" if torch.cuda.is_available() else "cpu"
     sc = StandardScaler().fit(Xtr)
     xt = torch.tensor(sc.transform(Xtr), dtype=torch.float32, device=dev)
     yt = torch.tensor(Ytr, dtype=torch.float32, device=dev)
-    xe = torch.tensor(sc.transform(Xte), dtype=torch.float32, device=dev)
     net = nn.Sequential(nn.Dropout(0.3), nn.Linear(xt.shape[1], 512), nn.ReLU(), nn.Dropout(0.3),
                         nn.Linear(512, yt.shape[1])).to(dev)
     pw = torch.tensor([pos_weight(int(c), len(Ytr)) for c in Ytr.sum(0)], device=dev)
@@ -97,9 +109,7 @@ def fit_predict_mlp(Xtr, Ytr, Xte, epochs: int = 60, seed: int = 0) -> np.ndarra
             loss_fn(net(xt[i]), yt[i]).backward()
             opt.step()
         sched.step()
-    net.eval()
-    with torch.no_grad():
-        return net(xe).cpu().numpy()
+    return sc, net.eval()
 
 
 def prototype_scores(Xtr, y, Xte) -> np.ndarray:

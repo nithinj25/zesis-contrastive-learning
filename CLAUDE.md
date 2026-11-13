@@ -1587,6 +1587,63 @@ artifacts in `artifacts/trace_v2/{trust,quality}.joblib`; results in `outputs/ev
   is flat throughout (0.915–0.924), the 3-camera probe ~0.99 for all. So mining mixes cameras in neighbour space at the
   cost of few-shot and retrieval accuracy; the headline `trace_v1_384` was selected at epoch 20, before mining
   started, which fits this. Not yet tested: Medha's lesion-guided crops and camera-balanced sampling as rungs.
+- **Final vs copy (13 Nov):** `trace_v2` is final, tagged `final-trace-v2` (local tag, not pushed); its weights, features
+  and trust files are read-only on disk. Teammates' ideas go only into a git worktree, `../zesis_combined` on branch
+  `combined`, with its own features / outputs / checkpoints copies; `raw/` and `processed/` are shared junctions.
+- **Supervised ResNet-50 baseline (13 Nov; `encoder/supervised.py`, `checkpoints/supervised_r50/`):** whole network
+  fine-tuned from ImageNet on RFMiD train (1,735 photos; 25 outputs = 24 labels with ≥ 5 positives + Disease_Risk),
+  BCE pos_weight capped at 50, retina views at 384 px, AdamW, epoch chosen on val-A (epoch 16). Own head on RFMiD test
+  **0.941** [0.929, 0.953] (TRACE frozen + linear 0.917). Frozen features through the same tests, supervised vs
+  trace_v1_384 (paired): RFMiD linear 0.918 vs 0.917 (−0.001 [−0.024, +0.026]); IDRiD any-DR 0.864 vs 0.871;
+  **Paraguay 0.933 vs 0.886 (TRACE −0.047 [−0.066, −0.029])**; retrieval precision@5 RFMiD 0.62 vs 0.50; **JSIEC
+  39-class prototype top-1 K = 1 / 5 / 10: 0.357 / 0.571 / 0.621 vs TRACE 0.403 / 0.628 / 0.716** (logistic 0.375 /
+  0.642 / 0.750 vs 0.420 / 0.677 / 0.782). So supervised wins on its labelled diseases (incl. DR at a new site);
+  TRACE wins on 39 new diseases from few photos. **Leave-one-camera-out is not valid for this baseline** (its backbone
+  saw labelled photos from every RFMiD camera; a fair run needs one retrain per held-out camera), so it isn't reported.
+- **UMAP (13 Nov; `scripts/umap_plots.py`, `outputs/figures/umap_imagenet_r50_vs_trace_v2.png`):** 3,835 labelled
+  RFMiD + RFMiD 2.0 photos; share of 20 nearest neighbours (2048-d, same eye excluded) with the same disease: ImageNet
+  0.65, TRACE 0.74 (chance 0.28); same camera 0.97 vs 0.92 (chance 0.58). TRC-NW300 still forms its own island.
+- **Retrieval (13 Nov; `eval/retrieval.py`, `outputs/eval/retrieval.json`, `outputs/figures/retrieval_trace_v2.png`,
+  4 random queries, seed 0):** library = head training + rare photos; precision@5, own eye excluded. RFMiD test macro:
+  ImageNet 0.41, plain 15 ep 0.50, TRACE 0.50, supervised 0.62. JSIEC CRVO 0.24 / 0.75 / 0.77 / 0.84; JSIEC RP
+  0.21 / 0.02 / 0.12 / 0.08; RFMiD AION (leave one eye out) TRACE 0.09 (chance 0.01). With 14 RP and 26 AION photos
+  in the library, nearest neighbours rarely are all that class: similar cases explain, the bank decides.
+- **LoRA adapter (13 Nov; `encoder/lora.py`, `outputs/eval/lora_trace_v2.json`):** own ~30-line LoRA (rank 8, alpha 16)
+  on all 10 layer4 convs of frozen trace_v2, 262k weights = 1.1%; deviation from §7.8's `peft` (its dependencies risk
+  the environment; see below). Same photos, RFMiD test, linear probe → LoRA: 1% (17 photos, 3 draws, 4 labels)
+  0.807 → 0.817; 10% (173, 3 draws, 14 labels) 0.879 → 0.884; 100% (1 run, 18 labels) 0.917 → **0.932** (supervised
+  full fine-tune 0.941). LoRA wins 6 of 7 runs; the 100% gain is one run without an interval.
+- **Approach 2's lesion-guided local crops, tested and rejected (13 Nov; copy only: `../zesis_combined`, branch
+  `combined`; `augment/lesions.py`, `scripts/lesion_maps.py`, rung `abl_r3_lesion`, `outputs/ablation/lesion/`):**
+  r3 multi-crop with Approach 2's locals (centres from a determinant-of-Hessian blob map, 80% guided / 20% uniform,
+  side 96–160 px at 512) + same-image queue masking; everything else as `abl_r3_multicrop`, whose re-run reproduced
+  the ladder numbers exactly. lesion vs multicrop (seed noise): JSIEC 5-shot prototype 0.550 vs 0.594 (0.004),
+  logistic 0.640 vs 0.664; unseen Kowa 0.894 vs 0.925 (0.006); same-camera neighbours 0.958 vs 0.929 (0.003);
+  RFMiD kNN 0.802 vs 0.818; RFMiD linear, IDRiD, Paraguay paired differences not significant. No local crops
+  (r2) gives JSIEC 5-shot 0.635. So it worsens the multi-crop few-shot drop and makes features more camera-driven;
+  not adopted. On the contact sheet the map hits exudates in DR eyes but vessel crossings in healthy eyes. The three
+  changes were tested together, so no single part is blamed.
+- **Teammates' evaluation protocols on the final encoder (13 Nov; code on branch `combined`; encoders unchanged):**
+  (1) **Duplicate cross-check** (`scripts/crosscheck_duplicates.py`, Approach 3's 143 pairs): all 60 confirmed + 2
+  candidate IDRiD ↔ RFMiD copies are ≥ 0.8 in our dedupe and in one same-eye group; 0 leaks (no train-side photo
+  paired with a kept test photo); their 81 "possibly related" IDRiD mask ↔ grading pairs are test-only on both sides.
+  (2) **Approach 3's fixed few-shot exam** (`eval/fixed_fewshot.py`, their trace_fewshot_v1 episodes ported: 11
+  novel RFMiD labels, K 1/3/5 × 50, 639 RFMiD val queries, head locked on base labels, macro AUPRC). Abundant
+  negatives: TRACE 0.144 / 0.232 / 0.264, plain MoCo 15 ep 0.117 / 0.198 / 0.226, ImageNet 0.095 / 0.141 / 0.169;
+  their reported DINOv2-S 0.123 / 0.199 / 0.227, DINOv2-L K=3 0.204, their best SSL K=3 0.238 (their pipeline, 448 px,
+  not paired). Paired over episodes, TRACE − plain +0.027 / +0.034 / +0.038 (better on 8–9 of 11 labels), − ImageNet
+  +0.050 / +0.091 / +0.095 (10–11 of 11). Strict K+K: TRACE 0.085 / 0.147 / 0.175. Label-shuffle control lift
+  0.005–0.009 (pass). Caveats: their queries are RFMiD val and TRACE's checkpoint was chosen on val-A (about half of
+  them); supervised_r50 (0.358 / 0.412 / 0.432) was trained on 9 of the 11 labels, so it is not comparable.
+  (3) **Approach 2's stress test** (`eval/stress.py`, their 11 artifacts × 5 levels ported; RFMiD test, probes on
+  clean train features; clean re-run matches cached features, cosine 1.0000). Mean macro-AUROC over 55 corrupted
+  settings / level 5 / mCE vs ImageNet / Disease_Risk flip rate: TRACE 0.897 / 0.872 / **0.667** / 5.8%; plain 0.889 /
+  0.851 / 0.719 / 8.3%; supervised 0.885 / 0.844 / 0.742 / 8.9%; ImageNet 0.845 / 0.802 / 1.000 / 11.8%. TRACE best or
+  tied on 10 of 11 artifacts (JPEG level 5: 0.843 vs ≤ 0.745); plain MoCo better on colour cast. Several artifacts
+  overlap TRACE's training simulator; levels 4–5 exceed its training ranges; no interval on mCE.
+- **Environment:** `.venv` uses system site-packages (numpy 1.26.4, pandas, sklearn live there). A plain `pip install
+  umap-learn` put numpy 2.2.6 into the venv and broke pandas (killed a training run); removed again. Install new
+  packages with `--no-deps`. `iterstrat` needs `test_size` passed explicitly with sklearn 1.8.
 - **Compute plan with real timings:** plain MoCo 100 epochs ≈ 5 h. TRACE (multi-crop, artifacts) **measured 84 img/s → 100 epochs ≈ 7.4 h**
   (was estimated at 6.3 h);
   384 px phase (20 epochs at ~35 img/s) ≈ 3.6 h; ablation ladder (10k photos, 30 epochs) ≈ 50 min a run. About 21 GPU-hours for the
