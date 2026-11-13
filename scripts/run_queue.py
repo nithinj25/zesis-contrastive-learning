@@ -26,6 +26,8 @@ ABLATION = {
     "abl_r1_views": ["views.artifacts=false", "views.n_local=0"] + NO_MINE_B1,
     "abl_r2_artifacts": ["views.n_local=0"] + NO_MINE_B1,
     "abl_r3_multicrop": NO_MINE_B1,
+    # Approach 2 (combined branch only): r3 with lesion-guided small locals + same-image queue masking
+    "abl_r3_lesion": NO_MINE_B1 + ["views.local_guided=true", "moco.mask_self=true"],
     "abl_r4_beta": ["mining.enabled=false"],
     "abl_r0_plain_s1": PLAIN + ["seed=1"],
     "abl_r5_full_s1": ["seed=1"],
@@ -98,9 +100,14 @@ def train(name: str, overrides: list[str]):
 
 
 if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--only", nargs="*", help="run just these rungs (e.g. abl_r3_lesion)")
+    names = ap.parse_args().only or list(ABLATION)
     os.makedirs("outputs/ablation", exist_ok=True)
-    say(f"queue start: {len(ABLATION)} runs")
-    ok = [n for n, o in ABLATION.items() if train(n, o)]
+    say(f"queue start: {len(names)} runs")
+    ok = [n for n in names if train(n, ABLATION[n])]
     for n in ok:
         if os.path.exists(os.path.join("features", n, "pool_global.npy")):
             continue

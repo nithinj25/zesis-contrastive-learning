@@ -20,7 +20,7 @@ _STATE: dict = {}
 
 
 def _init(paths: list[str], size: int, policy: str, sources: list | None = None, stats: dict | None = None,
-          view_kw: dict | None = None, local: tuple = (0, 96, (0.15, 0.35))):
+          view_kw: dict | None = None, local: tuple = (0, 96, (0.15, 0.35)), guided: dict | None = None):
     import cv2
 
     cv2.setNumThreads(1)
@@ -31,7 +31,14 @@ def _init(paths: list[str], size: int, policy: str, sources: list | None = None,
 
         view_kw["artifacts"] = Artifacts(stats, None if art is True else dict(art))
     _STATE.update(paths=paths, size=size, policy=policy, sources=sources, stats=stats or {}, view_kw=view_kw,
-                  local=local)
+                  local=local, guided=None)
+    if guided:  # lesion-guided locals: per-photo crop-sampling maps, memory-mapped so workers share one copy
+        maps = np.load(guided["maps"], mmap_mode="r")
+        keys = [str(x) for x in np.load(guided["maps"].replace(".npy", "_paths.npy"))]
+        row = {k: i for i, k in enumerate(keys)}
+        _STATE["guided"] = dict(maps=maps, row=[row[os.path.basename(os.path.dirname(p)) + "/" + os.path.basename(p)]
+                                                for p in paths], side=tuple(guided["side"]),
+                                min_retina=guided.get("min_retina", 0.85))
 
 
 def make_batch(job: tuple) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -60,7 +67,15 @@ def make_batch(job: tuple) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarr
             v1.append(retina_view_np(rgb, mask, rng, size, **kw))
             v2.append(retina_view_np(rgb, mask, rng, size, **kw))
             kw_l = {**kw, "scale": tuple(lscale)}  # same recipe, smaller crop (section 7.3 multi-crop)
-            loc.append([retina_view_np(rgb, mask, rng, lsize, **kw_l) for _ in range(n_local)])
+            gd = _STATE["guided"]
+            if gd is None:
+                loc.append([retina_view_np(rgb, mask, rng, lsize, **kw_l) for _ in range(n_local)])
+            else:  # Approach 2's lesion-guided locals; a failed draw falls back to the uniform local crop
+                from augment.lesions import sample_guided_crop
+
+                pmap = np.asarray(gd["maps"][gd["row"][i]], np.float32)
+                loc.append([retina_view_np(rgb, mask, rng, lsize, crop=sample_guided_crop(
+                    rng, pmap, mask, gd["side"], gd["min_retina"]), **kw_l) for _ in range(n_local)])
         else:
             raise ValueError(f"unknown view policy {policy!r}")
     if policy != "retina" or n_local == 0:
@@ -76,7 +91,7 @@ class ViewLoader:
     def __init__(self, paths: list[str], batch: int, workers: int, seed: int = 0, size: int = 224,
                  policy: str = "plain", root: str = "processed", prefetch: int | None = None,
                  sources: list | None = None, stats: dict | None = None, view_kw: dict | None = None,
-                 n_local: int = 0, local_size: int = 96, local_scale=(0.15, 0.35)):
+                 n_local: int = 0, local_size: int = 96, local_scale=(0.15, 0.35), guided: dict | None = None):
         """sources: camera id per photo and stats: data/trace_preprocess.json (both for policy "retina", step 7).
         view_kw: extra retina_view_np settings, e.g. scale. n_local: multi-crop local views per photo (retina only)."""
         self.paths = [os.path.join(root, p) for p in paths]
@@ -84,7 +99,7 @@ class ViewLoader:
         self.prefetch = prefetch or 2 * workers
         self.pool = mp.get_context("spawn").Pool(workers, initializer=_init,
                                                  initargs=(self.paths, size, policy, sources, stats, view_kw,
-                                                           (n_local, local_size, tuple(local_scale))))
+                                                           (n_local, local_size, tuple(local_scale)), guided))
 
     def __len__(self):
         return len(self.paths) // self.batch

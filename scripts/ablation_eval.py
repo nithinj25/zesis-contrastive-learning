@@ -28,6 +28,7 @@ RUNGS = [
     ("abl_r1_views", "+ retina-safe views"),
     ("abl_r2_artifacts", "+ artifact simulator"),
     ("abl_r3_multicrop", "+ multi-crop"),
+    ("abl_r3_lesion", "r3 with Approach 2 lesion-guided locals + self-masking"),
     ("abl_r4_beta", "+ same-camera negatives x2 (beta)"),
     ("abl_r5_full", "+ cross-camera mining (full TRACE)"),
 ]
