@@ -118,9 +118,14 @@ def main(cfg: DictConfig) -> None:
         view_kw = {"scale": tuple(cfg.views.global_scale),
                    "artifacts": OmegaConf.to_container(art) if OmegaConf.is_config(art) else bool(art)}
     n_local = int(cfg.views.get("n_local", 0)) if cfg.views.policy == "retina" else 0
+    guided = None
+    if n_local and cfg.views.get("local_guided", False):  # Approach 2: lesion-guided locals (scripts/lesion_maps.py)
+        guided = {"maps": cfg.views.get("lesion_maps", "data/lesion_maps.npy"),
+                  "side": tuple(cfg.views.get("local_side", (96, 160))), "min_retina": cfg.views.get("local_min_retina", 0.85)}
     ds = ViewLoader(rows.processed_path.tolist(), cfg.optim.batch, cfg.train.workers, cfg.seed, cfg.views.global_px,
                     cfg.views.policy, cfg.data.img_root, sources=rows.source.tolist(), stats=stats, view_kw=view_kw,
-                    n_local=n_local, local_size=cfg.views.local_px, local_scale=tuple(cfg.views.local_scale))
+                    n_local=n_local, local_size=cfg.views.local_px, local_scale=tuple(cfg.views.local_scale),
+                    guided=guided)
     B = cfg.optim.batch
     steps_per_epoch = len(ds)
     total = steps_per_epoch * cfg.optim.epochs
@@ -216,8 +221,11 @@ def main(cfg: DictConfig) -> None:
                 ql = model.q_enc(xl).view(n_local, B, -1) if n_local else None  # locals: own forward pass (own size)
             kw = dict(tau=cfg.moco.tau, beta=cfg.mining.beta, alpha=cfg.mining.get("alpha", 0.5),
                       top_frac=cfg.mining.get("top_frac", 0.01), knn=cfg.mining.get("knn", 10))
-            loss, st = multicrop_loss(q1, q2, k1, k2, ql, src, model.queue, model.queue_src, model.queue_kth, mine=mine, **kw)
             idx_t = torch.from_numpy(idx).long().to(device)
+            # Approach 2: never use a photo's own older key as a negative (queue_idx = pool row of each key)
+            excl = (idx_t[:, None] == model.queue_idx[None, :]) if cfg.moco.get("mask_self", False) else None
+            loss, st = multicrop_loss(q1, q2, k1, k2, ql, src, model.queue, model.queue_src, model.queue_kth, mine=mine,
+                                      exclude=excl, **kw)
             if mine and monitor is not None:  # before enqueue: the masks refer to the queue as the loss saw it
                 for j, a in enumerate(st["attract"]):
                     monitor.update(a, idx_t, src, model.queue_idx, model.queue_src, st["counts"] if j == 0 else None)

@@ -56,15 +56,21 @@ def mine_attract(s: torch.Tensor, src: torch.Tensor, queue_src: torch.Tensor, qu
 
 def trace_loss(q: torch.Tensor, k_pos: torch.Tensor, src: torch.Tensor, queue: torch.Tensor, queue_src: torch.Tensor,
                queue_kth: torch.Tensor, tau: float = 0.2, beta: float = 2.0, alpha: float = 0.5, mine: bool = True,
-               top_frac: float = 0.01, knn: int = 10) -> tuple[torch.Tensor, dict]:
-    """q, k_pos: (B, D) unit vectors (anchor and its true partner key). queue: (K, D). Returns (mean loss, stats)."""
+               top_frac: float = 0.01, knn: int = 10, exclude: torch.Tensor | None = None) -> tuple[torch.Tensor, dict]:
+    """q, k_pos: (B, D) unit vectors (anchor and its true partner key). queue: (K, D). Returns (mean loss, stats).
+    exclude: optional (B, K) bool, queue keys left out entirely (Approach 2's same-image masking: the anchor's own
+    older key is not a negative)."""
     q, k_pos = q.float(), k_pos.float()
     pos = (q * k_pos).sum(1)
     s = q @ queue.float().T
     valid = (queue_src >= 0)[None, :].expand_as(s)
+    if exclude is not None:
+        valid = valid & ~exclude
     same = (src[:, None] == queue_src[None, :]) & valid
     if mine:
         attract, stats = mine_attract(s.detach(), src, queue_src, queue_kth, knn, top_frac)
+        if exclude is not None:
+            attract = attract & ~exclude
     else:
         attract, stats = torch.zeros_like(s, dtype=torch.bool), {"attracted": 0}
     loss = contrastive_loss(pos, s, same, valid, attract, tau, beta, alpha)
@@ -75,14 +81,14 @@ def trace_loss(q: torch.Tensor, k_pos: torch.Tensor, src: torch.Tensor, queue: t
 
 def multicrop_loss(q1: torch.Tensor, q2: torch.Tensor, k1: torch.Tensor, k2: torch.Tensor, q_loc: torch.Tensor | None,
                    src: torch.Tensor, queue: torch.Tensor, queue_src: torch.Tensor, queue_kth: torch.Tensor,
-                   mine: bool = True, **kw) -> tuple[torch.Tensor, dict]:
+                   mine: bool = True, exclude: torch.Tensor | None = None, **kw) -> tuple[torch.Tensor, dict]:
     """Section 19.4: the mean over all (query, key) pairs. Globals: (q1, k2) and (q2, k1), mined after warm-up.
     Each local view (q_loc: (n, B, D)) is paired with BOTH global keys, mine=False (beta still applies); locals
     are never compared with each other. n = 4 gives 2 + 4 x 2 = 10 pairs; n = 0 gives plain two-view MoCo.
 
     A local's queue similarities are the same for k1 and k2, so they are computed once for both pairs."""
-    l12, s1 = trace_loss(q1, k2, src, queue, queue_src, queue_kth, mine=mine, **kw)
-    l21, s2 = trace_loss(q2, k1, src, queue, queue_src, queue_kth, mine=mine, **kw)
+    l12, s1 = trace_loss(q1, k2, src, queue, queue_src, queue_kth, mine=mine, exclude=exclude, **kw)
+    l21, s2 = trace_loss(q2, k1, src, queue, queue_src, queue_kth, mine=mine, exclude=exclude, **kw)
     stats = {"attracted_per_anchor": (s1["attracted_per_anchor"] + s2["attracted_per_anchor"]) / 2,
              "loss_global": float((l12 + l21).detach()) / 2, "attract": (s1["attract"], s2["attract"]),
              "counts": {k: s1[k] + s2[k] for k in ("cross", "high", "top", "mutual", "attracted") if k in s1}}
@@ -94,6 +100,8 @@ def multicrop_loss(q1: torch.Tensor, q2: torch.Tensor, k1: torch.Tensor, k2: tor
     srcl = src.repeat(n)
     s = ql @ queue.float().T
     valid = (queue_src >= 0)[None, :].expand_as(s)
+    if exclude is not None:
+        valid = valid & ~exclude.repeat(n, 1)
     same = (srcl[:, None] == queue_src[None, :]) & valid
     none = torch.zeros_like(s, dtype=torch.bool)
     loc = 0.0

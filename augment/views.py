@@ -132,7 +132,7 @@ RETINA_DEFAULTS = dict(rot=15.0, flip_p=0.5, colour_p=0.5, jitter_p=0.8, jitter=
 
 def retina_view_np(rgb: np.ndarray, mask: np.ndarray, rng: np.random.Generator, size: int = 224, scale=(0.6, 1.0),
                    camera: dict | None = None, pool: dict | None = None, colour_alpha: float = 0.7,
-                   artifacts=None, **kw) -> np.ndarray:
+                   artifacts=None, crop: tuple | None = None, **kw) -> np.ndarray:
     """One retina-safe view as uint8 (3, size, size), from the processed photo BEFORE step 8.
 
     camera / pool: LAB {mean, std} of this photo's camera and of the pool (data/trace_preprocess.json); step 7 is
@@ -142,7 +142,8 @@ def retina_view_np(rgb: np.ndarray, mask: np.ndarray, rng: np.random.Generator, 
     differences, so they come before step 8, which is processing."""
     p = {**RETINA_DEFAULTS, **kw}
     cx, cy, R = retina_geometry(rgb)
-    x, y, side = sample_crop(rng, cx, cy, R, scale)
+    # crop: a given (centre x, centre y, side), e.g. a lesion-guided local crop (augment/lesions.py)
+    x, y, side = crop if crop is not None else sample_crop(rng, cx, cy, R, scale)
     angle = rng.uniform(-p["rot"], p["rot"])
     flip = rng.random() < p["flip_p"]
     img, m, (vx, vy) = crop_rotate(rgb, mask, x, y, side, angle, size, flip, point=(cx, cy))
