@@ -1,0 +1,104 @@
+rfmid_split,rfmid_file,idrid_file,match_score,exact_copy
+test,rfmid/Test_Set/Test_Set/Test/469.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_67.jpg,0.996,True
+test,rfmid/Test_Set/Test_Set/Test/469.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_027.jpg,0.996,True
+test,rfmid/Test_Set/Test_Set/Test/470.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_69.jpg,0.998,True
+test,rfmid/Test_Set/Test_Set/Test/470.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_028.jpg,0.998,True
+test,rfmid/Test_Set/Test_Set/Test/470.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_327.jpg,0.998,True
+test,rfmid/Test_Set/Test_Set/Test/472.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_70.jpg,0.998,True
+test,rfmid/Test_Set/Test_Set/Test/473.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_71.jpg,0.937,False
+test,rfmid/Test_Set/Test_Set/Test/473.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_066.jpg,0.935,False
+test,rfmid/Test_Set/Test_Set/Test/474.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_72.jpg,0.999,True
+test,rfmid/Test_Set/Test_Set/Test/474.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_328.jpg,0.999,True
+test,rfmid/Test_Set/Test_Set/Test/478.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_388.jpg,0.929,False
+test,rfmid/Test_Set/Test_Set/Test/479.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_389.jpg,0.999,True
+test,rfmid/Test_Set/Test_Set/Test/480.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_390.jpg,0.999,True
+test,rfmid/Test_Set/Test_Set/Test/482.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_73.jpg,0.997,True
+test,rfmid/Test_Set/Test_Set/Test/482.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_020.jpg,0.996,True
+test,rfmid/Test_Set/Test_Set/Test/483.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_021.jpg,0.997,True
+test,rfmid/Test_Set/Test_Set/Test/483.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_391.jpg,0.997,True
+test,rfmid/Test_Set/Test_Set/Test/485.png,idrid/B. Disease Grading/1. Original Images/b. Testing Set/IDRiD_015.jpg,0.937,False
+test,rfmid/Test_Set/Test_Set/Test/496.png,idrid/B. Disease Grading/1. Original Images/b. Testing Set/IDRiD_016.jpg,0.996,True
+test,rfmid/Test_Set/Test_Set/Test/497.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_392.jpg,0.999,True
+test,rfmid/Test_Set/Test_Set/Test/506.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_010.jpg,0.999,True
+test,rfmid/Test_Set/Test_Set/Test/507.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_011.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1246.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_115.jpg,0.83,False
+train,rfmid/Training_Set/Training_Set/Training/1282.png,idrid/B. Disease Grading/1. Original Images/b. Testing Set/IDRiD_057.jpg,0.82,False
+train,rfmid/Training_Set/Training_Set/Training/1503.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_334.jpg,0.803,False
+train,rfmid/Training_Set/Training_Set/Training/1504.png,idrid/A. Segmentation/1. Original Images/a. Training Set/IDRiD_38.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1504.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_185.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1505.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_81.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1505.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_186.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1508.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_335.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1510.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_336.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1515.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_339.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1523.png,idrid/A. Segmentation/1. Original Images/a. Training Set/IDRiD_07.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1523.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_029.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1533.png,idrid/A. Segmentation/1. Original Images/a. Training Set/IDRiD_11.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1533.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_083.jpg,0.947,False
+train,rfmid/Training_Set/Training_Set/Training/1534.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_125.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1535.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_342.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1537.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_343.jpg,0.916,False
+train,rfmid/Training_Set/Training_Set/Training/1538.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_344.jpg,0.982,False
+train,rfmid/Training_Set/Training_Set/Training/1541.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_116.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1542.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_117.jpg,0.925,False
+train,rfmid/Training_Set/Training_Set/Training/1543.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_345.jpg,0.923,False
+train,rfmid/Training_Set/Training_Set/Training/1546.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_347.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1548.png,idrid/B. Disease Grading/1. Original Images/b. Testing Set/IDRiD_007.jpg,0.994,True
+train,rfmid/Training_Set/Training_Set/Training/1554.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_079.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1554.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_279.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1569.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_349.jpg,0.842,False
+train,rfmid/Training_Set/Training_Set/Training/1570.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_350.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1588.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_353.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1591.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_355.jpg,0.996,True
+train,rfmid/Training_Set/Training_Set/Training/1593.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_56.jpg,0.876,False
+train,rfmid/Training_Set/Training_Set/Training/1593.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_320.jpg,0.996,True
+train,rfmid/Training_Set/Training_Set/Training/1594.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_321.jpg,0.913,False
+train,rfmid/Training_Set/Training_Set/Training/1596.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_049.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1597.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_050.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1602.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_58.jpg,0.995,True
+train,rfmid/Training_Set/Training_Set/Training/1602.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_356.jpg,0.995,True
+train,rfmid/Training_Set/Training_Set/Training/1603.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_322.jpg,0.995,True
+train,rfmid/Training_Set/Training_Set/Training/1614.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_358.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1623.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_360.jpg,0.889,False
+train,rfmid/Training_Set/Training_Set/Training/1624.png,idrid/B. Disease Grading/1. Original Images/b. Testing Set/IDRiD_008.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1626.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_361.jpg,0.817,False
+train,rfmid/Training_Set/Training_Set/Training/1627.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_362.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1628.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_363.jpg,0.934,False
+train,rfmid/Training_Set/Training_Set/Training/1629.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_364.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1630.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_365.jpg,0.825,False
+train,rfmid/Training_Set/Training_Set/Training/1636.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_59.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1636.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_128.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1637.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_044.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1642.png,idrid/B. Disease Grading/1. Original Images/b. Testing Set/IDRiD_009.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1643.png,idrid/A. Segmentation/1. Original Images/a. Training Set/IDRiD_02.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1643.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_366.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1644.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_367.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1645.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_368.jpg,0.954,False
+train,rfmid/Training_Set/Training_Set/Training/1647.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_370.jpg,0.994,True
+train,rfmid/Training_Set/Training_Set/Training/1650.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_372.jpg,0.995,True
+train,rfmid/Training_Set/Training_Set/Training/1657.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_373.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1660.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_374.jpg,0.996,True
+train,rfmid/Training_Set/Training_Set/Training/1661.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_62.jpg,0.996,True
+train,rfmid/Training_Set/Training_Set/Training/1661.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_073.jpg,0.996,True
+train,rfmid/Training_Set/Training_Set/Training/1661.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_375.jpg,0.996,True
+train,rfmid/Training_Set/Training_Set/Training/1665.png,idrid/B. Disease Grading/1. Original Images/b. Testing Set/IDRiD_010.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1667.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_376.jpg,0.957,False
+train,rfmid/Training_Set/Training_Set/Training/1668.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_377.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1675.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_379.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1681.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_63.jpg,0.998,True
+train,rfmid/Training_Set/Training_Set/Training/1681.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_059.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1682.png,idrid/A. Segmentation/1. Original Images/b. Testing Set/IDRiD_64.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1693.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_119.jpg,0.997,True
+train,rfmid/Training_Set/Training_Set/Training/1704.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_386.jpg,0.999,True
+train,rfmid/Training_Set/Training_Set/Training/1709.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_387.jpg,0.886,False
+train,rfmid/Training_Set/Training_Set/Training/1726.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_003.jpg,0.996,True
+train,rfmid/Training_Set/Training_Set/Training/1875.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_386.jpg,0.808,False
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/199.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_092.jpg,0.867,False
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/511.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_325.jpg,1.0,True
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/512.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_326.jpg,1.0,True
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/514.png,idrid/B. Disease Grading/1. Original Images/b. Testing Set/IDRiD_001.jpg,0.986,False
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/515.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_382.jpg,0.999,True
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/517.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_383.jpg,0.997,True
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/519.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_101.jpg,0.998,True
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/523.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_243.jpg,0.823,False
+val,rfmid/Evaluation_Set/Evaluation_Set/Validation/526.png,idrid/B. Disease Grading/1. Original Images/a. Training Set/IDRiD_385.jpg,0.916,False

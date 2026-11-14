@@ -42,7 +42,7 @@ coordinates are used).
 different eyes). A photo is dropped if it matches (score ≥ 0.6) a photo in a higher split (test > val >
 train/pool), or if it is a same-eye copy (≥ 0.8) inside one dataset's test or val split. After dropping, no kept
 photo matches a kept photo of another split. Main findings:
-- **84 RFMiD photos are IDRiD photos** (60 exact copies; RFMiD train 60, val 9, test 15, matching 102 IDRiD photos in 103 pairs). Train and val copies are dropped; test copies are kept in both test sets, linked by `dup_group`.
+- **84 RFMiD photos are IDRiD photos** (60 exact copies; RFMiD train 60, val 9, test 15, matching 102 IDRiD photos in 103 pairs). Train and val copies are dropped; test copies are kept in both test sets, linked by `dup_group`. Full list: [docs/idrid_in_rfmid.csv](docs/idrid_in_rfmid.csv).
 - **Paraguay contains the same eye photographed more than once**: 251 same-eye pairs, 203 copies dropped.
 - Cautious by design: most 0.6–0.8 matches are different eyes that look alike, so some photos were dropped
   needlessly (mainly pool photos, which is cheap).
