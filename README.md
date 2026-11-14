@@ -188,7 +188,7 @@ see [DATA_CARD.md](DATA_CARD.md).
 **Leakage rules we never break:**
 - Every photo is compared with every other for duplicates and same-eye copies (matched on fine vessel detail).
   2,039 photos were dropped. A copy of a test photo never enters training. **84 RFMiD photos are IDRiD photos**
-  (76 exact copies), so "pretrain on RFMiD, test on IDRiD" leaks unless they are removed; we remove them.
+  (60 exact copies; 69 in RFMiD train or val), so "pretrain on RFMiD, test on IDRiD" leaks unless they are removed; we remove them.
   A teammate's independent duplicate list (143 pairs) found no pair we missed.
 - Splits keep the same eye together.
 - Validation is split in two: **val-A** tunes settings, **val-B** sets the conformal threshold.

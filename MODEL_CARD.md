@@ -40,7 +40,7 @@ A whole folder: `python -m encoder.embed --images <folder> --out features.npy` (
 ## 3. Data and leakage control
 
 Details in [DATA_CARD.md](DATA_CARD.md). Nine public datasets, 45,864 photos; deduplicated by vessel-pattern matching
-(2,039 dropped). **84 RFMiD photos are IDRiD photos** (76 exact copies); the train and val copies were removed, so the
+(2,039 dropped). **84 RFMiD photos are IDRiD photos** (60 exact copies; 60 in train, 9 val, 15 test); the 69 train and val copies were removed, so the
 organisers' "pretrain on RFMiD, test on IDRiD" flow would leak unless they do the same. AION, CRVO and RP photos were
 removed from pretraining and from every head, so tests on them are on diseases the system never trained on.
 Held out until evaluation: RFMiD test, RFMiD 2.0 test, IDRiD, JSIEC-1000, Paraguay (ZEISS VISUCAM 500).

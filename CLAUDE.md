@@ -1251,8 +1251,9 @@ Reviewed answers to the open design questions. The sections above already reflec
   finding (`eyepacs_36416_right`, `eyepacs_41176_left`). Regression vs the 8,722-image run: no ≥ 0.8 pair lost except pool-pool ones
   (skipped on purpose); 3 earlier drops are RFMiD 2.0 test copies of RFMiD test photos, now kept by the two-test-sets rule; 3 APTOS photos
   matched only at 0.60–0.68 (mostly look-alikes) and are missed now that pool photos do not search.
-- **IDRiD photos are inside RFMiD.** 84 RFMiD photos match IDRiD at ≥ 0.8, 76 of them exact copies (score > 0.99), almost all from RFMiD's
-  Kowa VX-10α group (IDRiD's camera, which also confirms §5.5's size-to-camera mapping): RFMiD train 72, val 9, test 22. The organisers'
+- **IDRiD photos are inside RFMiD.** 84 RFMiD photos match IDRiD at ≥ 0.8, 60 of them exact copies (score > 0.99), almost all from RFMiD's
+  Kowa VX-10α group (IDRiD's camera, which also confirms §5.5's size-to-camera mapping): RFMiD train 60, val 9, test 15
+  (corrected 14 Nov: the earlier "76 exact; train 72, val 9, test 22" counted pairs, 103 in all, not photos). The organisers'
   flow (pretrain on RFMiD, test on IDRiD) would leak these; ours drops the train and val copies. **Tell the mentor.** RFMiD test ↔ IDRiD
   copies are two test sets, so both are kept, linked by `dup_group`.
 - **Same eye, different diagnosis:** `rfmid_train_1282` (RFMiD: CRVO) is the same eye as `idrid_test_057` (IDRiD: DR grade 4, DME 2),

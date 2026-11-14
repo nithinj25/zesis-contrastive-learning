@@ -109,7 +109,7 @@ EyePACS has `patient`, `laterality`, `eyeq_quality`, APTOS has `aptos_split`.
 
 ### 5.1 The problem
 If a test photo has a copy in the training data, the test score is fake. Public datasets copy each other:
-we found **84 RFMiD photos that are IDRiD photos** (76 exact copies), 72 of them in RFMiD *train*. ZEISS's own
+we found **84 RFMiD photos that are IDRiD photos** (60 exact copies), 60 of them in RFMiD *train*. ZEISS's own
 plan (pretrain on RFMiD, test on IDRiD) would leak these.
 
 ### 5.2 Why the usual tool failed
