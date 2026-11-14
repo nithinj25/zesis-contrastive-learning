@@ -170,7 +170,7 @@ See [README.md](README.md). Datasets must be downloaded by the user under their 
 
 ## 9. Licence and citation
 
-- **Weights: research use only.** They were trained on datasets whose terms are research-only or still to be verified
+- **Weights: research use only.** Download: [higgsboson25/trace-retinal-encoder](https://huggingface.co/higgsboson25/trace-retinal-encoder). They were trained on datasets whose terms are research-only or still to be verified
   (EyePACS and APTOS Kaggle terms; RFMiD; see [DATA_CARD.md](DATA_CARD.md)).
 - **Code:** MIT licence ([LICENSE](LICENSE)).
 - Cite the datasets as listed in the data card.

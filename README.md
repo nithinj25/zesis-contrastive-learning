@@ -7,8 +7,8 @@ eye doctors use to find diabetic retinopathy, glaucoma, vein blockages and many 
 team **div4maxxers** (BMSIT, Bengaluru) for the **ZEISS India Campus Hackathon "Beyond Code 2026", Theme 2:
 Contrastive Learning for Rare Eye Diseases**.
 
-**Status (13 Nov 2026):** the encoder is final and frozen; finding detectors, rare-disease bank, trust layer and the
-demo app are built and evaluated; the model card is written. Still to come: the weights download link.
+**Status (14 Nov 2026):** the encoder is final and frozen; finding detectors, rare-disease bank, trust layer and the
+demo app are built and evaluated; the model card is written. **Weights:** [higgsboson25/trace-retinal-encoder](https://huggingface.co/higgsboson25/trace-retinal-encoder) on Hugging Face.
 Full results: [MODEL_CARD.md](MODEL_CARD.md). Data: [DATA_CARD.md](DATA_CARD.md).
 
 ---
@@ -192,8 +192,13 @@ see [DATA_CARD.md](DATA_CARD.md).
 
 ## 7. Use the trained encoder
 
-**Weights:** `encoder.pt` (94 MB, ResNet-50 backbone); put it at `checkpoints/trace_v2/encoder.pt`. Download link:
-*to be added*. Research use only (see the model card). The camera colour statistics (`data/trace_preprocess.json`)
+**Weights:** on Hugging Face at [higgsboson25/trace-retinal-encoder](https://huggingface.co/higgsboson25/trace-retinal-encoder): `encoder.pt` (94 MB, ResNet-50
+backbone) plus the heads and trust files the demo needs (102 MB). No login needed; from the repo folder run
+
+```bash
+huggingface-cli download higgsboson25/trace-retinal-encoder --local-dir .   # -> checkpoints/trace_v2/, artifacts/trace_v2/
+```
+Research use only (see the model card). The camera colour statistics (`data/trace_preprocess.json`)
 are in the repo. On a laptop CPU one photo takes about 0.3 s to preprocess and 0.15 s to encode.
 
 ```python
