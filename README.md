@@ -54,6 +54,12 @@ poor photos, and it refers rather than guesses when it is unsure.
 |---|---|
 | ![UMAP](docs/figures/umap.png) | ![Retrieval](docs/figures/retrieval.png) |
 
+![Risk-coverage](docs/figures/risk_coverage.png)
+
+**Knowing when it is unsure:** sorted by its calibrated confidence, TRACE's error falls from 20.4% when it answers
+every photo to 13.7% when it answers its most confident 80%, and 8.5% at 50% (area under the curve 0.086; supervised
+0.092, plain MoCo 0.094, ImageNet 0.110). The decision rule uses this: unsure photos are short-listed or referred.
+
 ---
 
 ## 2. The problem in plain words
@@ -105,10 +111,11 @@ Encoder (ResNet-50, frozen) ──► 2048-number "fingerprint" of the eye
 Our first plan was **zero-shot**: score a rare disease from its textbook findings with a knowledge graph
 ("disc swelling + pale disc → AION"), with no photos of it at all. **It failed**: 0 of 30 AION and 0 of 78 CRVO photos
 were ranked first, because the finding detectors barely respond to CRVO's signs and one weak finding cannot beat the
-prior towards "normal". With **a few photos** it works: a small bank of rare-disease prototypes with distribution
-calibration catches CRVO 79%, RP 79% and AION 47% of the time at a 5% false-alarm rate, and 95% of CRVO and RP photos
-from JSIEC, a dataset it never saw. So rare diseases are recognised from a few photos, and the knowledge graph is used
-to **explain** decisions, not to make them.
+prior towards "normal". With **a few photos** it works. At a 5% false-alarm rate, the simple prototype bank that the
+decision rule and demo use catches CRVO 57%, AION 37% and RP 36% of the time, and all JSIEC CRVO photos (a dataset it
+never saw). A logistic model with distribution calibration, tested separately and not yet in the decision rule, raises
+this to CRVO 79%, RP 79%, AION 47%, and 95% of JSIEC's CRVO and RP photos (model card, section 4.2). So rare diseases
+are recognised from a few photos, and the knowledge graph is used to **explain** decisions, not to make them.
 
 ---
 
@@ -201,6 +208,22 @@ huggingface-cli download higgsboson25/trace-retinal-encoder --local-dir .   # ->
 Research use only (see the model card). The camera colour statistics (`data/trace_preprocess.json`)
 are in the repo. On a laptop CPU one photo takes about 0.3 s to preprocess and 0.15 s to encode.
 
+### Embed a folder of photos (one command)
+
+```bash
+python -m encoder.embed --images path/to/photos --out features.npy               # unknown camera (default)
+python -m encoder.embed --images path/to/photos --out features.npy --camera kowa_vx10a   # a camera TRACE knows
+```
+It finds every `.jpg/.jpeg/.png/.tif/.tiff/.bmp` under the folder (recursively), applies TRACE's evaluation
+preprocessing and writes `features.npy` (float32, N × 2048, L2-normalised, so cosine = dot product) plus
+`features_index.csv` (row, path, ok, error). A photo where no retina is found gets a row of zeros and `ok = False`, so
+rows always line up with the file list. GPU if available, else CPU (about 6 photos/s with 4 preprocessing workers,
+on full-size 4288 × 2848 photos). On real test photos its features match the ones behind every result in the model
+card (cosine 1.00000). Known camera ids: `topcon_3d_oct2000`, `kowa_vx10a`, `topcon_trc_nw300`, `rfmid2_512x512`,
+`rfmid2_1504x1000`, `aptos`, `eyepacs`; for any other camera leave `--camera` out.
+
+### From Python
+
 ```python
 import cv2
 from encoder.export import load_trace_encoder, preprocess
@@ -216,7 +239,7 @@ it. `preprocess` raises `ValueError` if no retina is found.
 ### The demo app
 
 ```bash
-python -m demo.app        # or: make demo   ->  open http://127.0.0.1:7860
+python -m demo.app        # open http://127.0.0.1:7860 (needs the Hugging Face download above)
 ```
 Upload a fundus photo and get the decision card: **diagnose / short-list / refer / retake**, with the reason, the
 quality, familiarity and rare-disease checks, the 90% conformal set, the calibrated findings, the evidence for and
@@ -238,7 +261,7 @@ python -m venv .venv
 # Windows:  .venv\Scripts\activate      Linux/Mac:  source .venv/bin/activate
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121   # match your CUDA
 pip install -r requirements.txt
-pytest -q                     # 215 tests
+pytest -q                     # 234 tests
 ```
 
 ### Put the datasets in `raw/`
@@ -267,6 +290,7 @@ A missing dataset is skipped with a message. Exact paths are at the top of [data
 | `make heads` | finding detectors and the rare-disease bank | minutes |
 | `make trust` | classifier, calibration, per-camera conformal sets, OOD index, quality gate | minutes |
 | `make demo` | build the demo files (`findings.export`, `demo.bundle`) and start the demo | ~2 min |
+| `make embed IMAGES=… OUT=…` | features of any folder of photos (section 7) | ~6 photos/s (CPU) |
 | `make eval` | every result in the model card | ~1–2 h (CPU) |
 | `make figures` | UMAP and the disease × finding map | minutes |
 | `make test` | unit tests | ~1 min |
@@ -296,7 +320,7 @@ zesis/
 ├── scripts/             # audits, contact sheets, ablation queue, figures
 ├── docs/                # data pipeline walkthrough, figures
 ├── demo/                # Gradio demo: one-photo pipeline, demo bundle, app
-└── tests/               # 215 unit tests (pytest)
+└── tests/               # 234 unit tests (pytest)
 ```
 
 Not in git (too big, or not ours to share): `raw/`, `processed/`, `features/`, `checkpoints/`, `artifacts/`,

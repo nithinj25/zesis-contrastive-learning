@@ -25,7 +25,7 @@ full log, with dates and the reasoning behind each choice, is section 20 of [CLA
 | Pretraining | MoCo v2 (queue 8,192, momentum 0.999, τ 0.2) with retina-safe views, a camera-artifact simulator, multi-crop and same-camera negatives ×2 (β = 2); the val-A-chosen checkpoint after 20 epochs at 224 px, then 10 more epochs at 384 px (also chosen on val-A) | Labels never used |
 | Finding detectors | 14 small MLPs + 6 prototypes over 20 findings (disc edema, haemorrhage, drusen, …), calibrated | RFMiD + RFMiD 2.0 head-training labels (2,193 photos) |
 | Disease classifier | Logistic regression, 6 diseases + "other abnormal", temperature-scaled | Same |
-| Rare-disease bank | One prototype per rare disease (AION, CRVO, RP), called only above a margin set for 5% false alarms on val-A | The rare photos only |
+| Rare-disease bank | One prototype (mean feature) per rare disease (AION, CRVO, RP), called only above a margin set for 5% false alarms on val-A | The rare photos only |
 | Trust layer | Quality gate, kNN out-of-distribution check (FAISS), per-camera conformal prediction sets, decision rule | Val-A (thresholds, temperature) and val-B (conformal), never the training photos |
 
 The cross-camera false-negative mining described in our proposal was built and tested, but **is not in the final
@@ -35,6 +35,7 @@ few-shot accuracy for camera mixing. It is reported as a tested idea, not as par
 **Interface** ([encoder/export.py](encoder/export.py)): `load_trace_encoder("encoder.pt")`, `preprocess(photo_rgb)`
 → `(3, 384, 384)` in [0, 1] → `(1, 2048)` features. A known camera gets its stored colour correction; an unknown camera
 skips it (no per-image colour normalisation, which would erase pallor).
+A whole folder: `python -m encoder.embed --images <folder> --out features.npy` (README section 7).
 
 ## 3. Data and leakage control
 
@@ -77,9 +78,21 @@ TRACE 0.144 / 0.232 / 0.264; plain MoCo 0.117 / 0.198 / 0.226; ImageNet 0.095 / 
 DINOv2-S run on the same episodes: 0.123 / 0.199 / 0.227 (their preprocessing at 448 px, so not a paired comparison).
 TRACE's checkpoint was chosen on val-A, which overlaps these queries, so it has a slight selection advantage.
 
-**Rare diseases never trained on** (share caught at a 5% false-alarm rate on val-A; logistic model with distribution
-calibration): AION 0.47 (30 photos), CRVO 0.79 (56), RP 0.79 (14); on JSIEC, a dataset never seen, CRVO 0.95 and RP
-0.95 (22 each). Small samples: read these as indications, not precise rates.
+**Rare diseases never trained on** (share caught at a 5% false-alarm rate on val-A; RFMiD photos in 5 folds by eye,
+JSIEC with all rare photos as support). Three ways of using the same few photos, all on the frozen features:
+
+| Rare disease (photos) | Prototype (**used by the decision rule and demo**) | Logistic | Logistic + distribution calibration |
+|---|---|---|---|
+| AION (30) | 0.37 | 0.43 | 0.47 |
+| CRVO (56) | 0.57 | 0.77 | 0.79 |
+| RP (14) | 0.36 | 0.71 | 0.79 |
+| JSIEC CRVO (22), dataset never seen | 1.00 | 1.00 | 0.95 |
+| JSIEC RP (22), dataset never seen | 0.50 | 0.86 | 0.95 |
+
+Distribution calibration (Yang et al., ICLR 2021) was chosen on a practice task built from common diseases, then run
+once on these photos. It is evaluated separately and **not yet wired into the decision rule**, which still uses the
+prototype bank; the rare-photo rows of section 4.4 therefore describe the prototype bank. Small samples: read these as
+indications, not precise rates.
 
 **Zero-shot from a knowledge graph failed:** scoring AION and CRVO from literature-based finding profiles, with no
 photos, got 0 of 30 and 0 of 78 right (the detectors barely respond to CRVO's signs). Rare diseases therefore need a
@@ -100,6 +113,7 @@ linear probe → LoRA on the same photos: 1% of labels (17 photos, 3 draws) 0.80
 | New camera (Paraguay) | Coverage drops to 0.575 with existing thresholds; re-calibrated on ~100 local photos: 0.895 [0.836, 0.946], with larger sets (3.6) |
 | Out-of-distribution | Non-fundus images (CIFAR-10): AUROC 1.000. Fundus diseases unknown to TRACE (13 JSIEC classes): AUROC 0.823, but catching 95% of them would also flag 66% of familiar photos. RFMiD test flagged 5.8% (target 5%); Paraguay 21.5% |
 | Quality gate (EyeQ reject photos) | Catches 88.8%; asks for a retake on 3.6% of RFMiD, 11.1% of RFMiD 2.0, 20% of JSIEC and 55.5% of Paraguay photos (27.8% after onboarding with 100 local photos) |
+| Risk–coverage (classifier alone, 732 photos) | Error 20.4% answering all, 13.7% answering the most confident 80%, 8.5% at 50%; AURC 0.086 (supervised 0.092, plain MoCo 0.094, ImageNet 0.110). Figure: `docs/figures/risk_coverage.png` |
 | Full decision rule, RFMiD + RFMiD 2.0 test (787) | Diagnose 34% · short-list 31% · refer 30% · retake 5%. Diagnoses right 90.3%; **confidently wrong 3.3%**; short-lists hold the true disease 84% |
 | Rare-disease photos (63) | Refer 79%, **confidently wrong 0%** |
 | Diseases TRACE does not know (JSIEC, 219) | Confidently wrong 7.8% |

@@ -1644,6 +1644,29 @@ artifacts in `artifacts/trace_v2/{trust,quality}.joblib`; results in `outputs/ev
 - **Environment:** `.venv` uses system site-packages (numpy 1.26.4, pandas, sklearn live there). A plain `pip install
   umap-learn` put numpy 2.2.6 into the venv and broke pandas (killed a training run); removed again. Install new
   packages with `--no-deps`. `iterstrat` needs `test_size` passed explicitly with sklearn 1.8.
+- **Packaging (13–14 Nov):** demo app (`demo/app.py`, `demo/pipeline.py`; Gradio 5.20 + pydantic ≥ 2.11 needs the
+  `get_type` patch and `show_api=False`), `Makefile` rewritten, MIT licence for code (weights research use only).
+  **Weights on Hugging Face: `higgsboson25/trace-retinal-encoder`** (encoder.pt + artifacts/trace_v2, 197 MB, public);
+  an anonymous download was byte-identical to the local files. Windows path limit: download into a short folder.
+  `master` now includes the `combined` branch (merged via GitHub PR #1 on 13 Nov): teammates' eval scripts plus the
+  rejected lesion-crop code, switched off by default (`views.local_guided`, `moco.mask_self` false).
+- **Embed a folder (14 Nov; `encoder/embed.py`, `make embed`):** `python -m encoder.embed --images <dir> --out f.npy
+  [--camera id]` → (N, 2048) float32 + `<name>_index.csv`; no-retina photos are zero rows with `ok = False`. Workers
+  never import torch (the pixel steps moved to torch-free `data.preprocess.eval_view` / `prepare_photo`; `export.py`
+  outputs byte-identical on 64 checks). On 40 real test photos (Kowa with `--camera`, Paraguay without) cosine to the
+  cached features 1.00000; CPU vs GPU 0.999999; ~6 photos/s on CPU with 4 workers at 4288 × 2848.
+- **`requirements.txt` pinned (14 Nov)** to the versions behind the results; unused `timm`, `lightly`, `albumentations`,
+  `peft`, `torch-geometric`, `imagehash`, `networkx`, `wandb` dropped (deviation from §19.12; LoRA is our own code).
+  `umap-learn` pinned to 0.5.7, because 0.6 declares numpy ≥ 2 (it ran on 1.26 here, but a fresh install would
+  refuse). A pip dry run resolves all 85 packages with numpy 1.26.4. A fresh install gets newer fastapi / starlette than
+  the demo was tested with (gradio's own pins forbid the tested ones); not run end to end (fresh-clone check skipped).
+- **Risk–coverage figure (14 Nov; `scripts/risk_coverage_plot.py`, `docs/figures/risk_coverage.png`):** classifier
+  alone, 732 RFMiD + RFMiD 2.0 test photos, 7 classes. Error answering all / 80% / 50%, AURC: TRACE 0.204 / 0.137 /
+  0.085, 0.086; supervised 0.195 / 0.140 / 0.090, 0.092; plain MoCo 15 ep 0.225 / 0.162 / 0.071, 0.094; ImageNet
+  0.246 / 0.183 / 0.087, 0.110. TRACE best AURC but close to supervised and plain; no interval computed.
+- **Rare-disease wording fixed (14 Nov):** README and model card now say the decision rule and demo use the prototype
+  bank (called at 5% false alarm: AION 0.37, CRVO 0.57, RP 0.36, JSIEC CRVO 1.00, RP 0.50); the logistic +
+  distribution-calibration rates are a separately evaluated model, not yet wired in.
 - **Compute plan with real timings:** plain MoCo 100 epochs ≈ 5 h. TRACE (multi-crop, artifacts) **measured 84 img/s → 100 epochs ≈ 7.4 h**
   (was estimated at 6.3 h);
   384 px phase (20 epochs at ~35 img/s) ≈ 3.6 h; ablation ladder (10k photos, 30 epochs) ≈ 50 min a run. About 21 GPU-hours for the

@@ -5,8 +5,10 @@ PY   ?= python
 ENC  ?= trace_v2
 W    ?= checkpoints/$(ENC)/encoder.pt
 BASE ?= imagenet_r50 moco_plain_e15 supervised_r50
+IMAGES ?= photos
+OUT  ?= features.npy
 
-.PHONY: help data audit probe pretrain baselines features heads trust eval figures demo test
+.PHONY: help data audit probe pretrain baselines features heads trust eval figures demo embed test
 
 help:            ## list targets
 	@grep -E '^[a-z]+:.*## ' Makefile | sed -E 's/:.*## /\t/'
@@ -61,14 +63,18 @@ eval:            ## every result in MODEL_CARD.md for ENC against BASE -> output
 	$(PY) -m eval.decision_eval --name $(ENC)
 	$(PY) -m encoder.lora --encoder $(ENC)
 
-figures:         ## UMAP (disease / camera) and the disease x finding map -> outputs/figures/
+figures:         ## UMAP (disease / camera), the disease x finding map and risk-coverage curves -> outputs/figures/
 	$(PY) -m scripts.umap_plots --encoders imagenet_r50 $(ENC)
 	$(PY) scripts/disease_finding_map.py --name $(ENC)
+	$(PY) -m scripts.risk_coverage_plot
 
 demo:            ## build the demo files, then the Gradio demo on http://127.0.0.1:7860 (CPU is enough)
 	$(PY) -m findings.export --name $(ENC)
 	$(PY) -m demo.bundle --name $(ENC)
 	$(PY) -m demo.app
+
+embed:           ## features of any folder of photos: make embed IMAGES=path/to/photos OUT=features.npy (add CAMERA=<id> if known)
+	$(PY) -m encoder.embed --images $(IMAGES) --out $(OUT) --weights $(W) $(if $(CAMERA),--camera $(CAMERA))
 
 test:            ## unit tests
 	$(PY) -m pytest -q

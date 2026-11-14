@@ -17,7 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 
-from data.preprocess import camera_color, clahe_l, correct_illumination, find_fov, standardise_geometry
+from data.preprocess import eval_view, prepare_photo
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -59,17 +59,14 @@ def finish_view(rgb: np.ndarray, mask: np.ndarray, source_id: str | None, stats:
 
     Evaluation policy (section 19.1): a camera with stored statistics gets step 7; an unknown camera skips it
     and relies on learned invariance. Per-image colour normalisation is never used (it erases pallor).
+    The pixel work is data.preprocess.eval_view (no torch, so worker processes can share it).
     """
-    cams = stats.get("cameras", {})
-    if source_id in cams:
-        c, p = cams[source_id], stats["pool"]
-        rgb = camera_color(rgb, mask, c["mean"], c["std"], p["mean"], p["std"], stats["params"]["colour_alpha"])
-    rgb = clahe_l(rgb, mask, clip=stats["params"]["clahe_clip"])
-    if rgb.shape[0] != size:
-        import cv2
+    return to_tensor(eval_view(rgb, mask, source_id, stats, size))
 
-        rgb = cv2.resize(rgb, (size, size), interpolation=cv2.INTER_AREA)
-    return torch.from_numpy(np.ascontiguousarray(rgb)).permute(2, 0, 1).float() / 255.0
+
+def to_tensor(rgb_uint8: np.ndarray) -> torch.Tensor:
+    """uint8 (H, W, 3) -> float (3, H, W) in [0, 1]."""
+    return torch.from_numpy(np.ascontiguousarray(rgb_uint8)).permute(2, 0, 1).float() / 255.0
 
 
 def preprocess(img_rgb_uint8: np.ndarray, source_id: str | None = None,
@@ -80,9 +77,4 @@ def preprocess(img_rgb_uint8: np.ndarray, source_id: str | None = None,
     """
     with open(stats_path) as f:
         stats = json.load(f)
-    fov = find_fov(img_rgb_uint8)
-    if fov is None:
-        raise ValueError("retina not found (fov_fail)")
-    std, mask = standardise_geometry(img_rgb_uint8, fov)
-    lit = correct_illumination(std, mask, strength=stats["params"]["illumination_strength"])
-    return finish_view(lit, mask, source_id, stats)
+    return to_tensor(prepare_photo(img_rgb_uint8, source_id, stats, EVAL_SIZE))

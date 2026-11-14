@@ -214,3 +214,29 @@ def pooled_stats(means: np.ndarray, stds: np.ndarray, counts: np.ndarray) -> tup
     mean = (w * means).sum(0) / w.sum()
     second = (w * (stds**2 + means**2)).sum(0) / w.sum()
     return mean, np.sqrt(np.maximum(second - mean**2, 0))
+
+
+def eval_view(rgb: np.ndarray, mask: np.ndarray, source_id: str | None, stats: dict, size: int = 384) -> np.ndarray:
+    """Evaluation-time steps 7 (known camera only) and 8 on a processed 512 px photo, then resize: uint8 (size, size, 3).
+
+    CLAUDE.md section 19.1 policy: a camera with stored statistics (data/trace_preprocess.json) gets step 7; an
+    unknown camera skips it. No torch here, so worker processes can run it cheaply (encoder/export.py wraps it).
+    """
+    cams = stats.get("cameras", {})
+    if source_id in cams:
+        c, p = cams[source_id], stats["pool"]
+        rgb = camera_color(rgb, mask, c["mean"], c["std"], p["mean"], p["std"], stats["params"]["colour_alpha"])
+    rgb = clahe_l(rgb, mask, clip=stats["params"]["clahe_clip"])
+    if rgb.shape[0] != size:
+        rgb = cv2.resize(rgb, (size, size), interpolation=cv2.INTER_AREA)
+    return np.ascontiguousarray(rgb)
+
+
+def prepare_photo(img_rgb: np.ndarray, source_id: str | None, stats: dict, size: int = 384) -> np.ndarray:
+    """Raw RGB photo -> uint8 (size, size, 3): steps 3, 4, 6, then eval_view. ValueError if no retina is found."""
+    fov = find_fov(img_rgb)
+    if fov is None:
+        raise ValueError("retina not found (fov_fail)")
+    std, mask = standardise_geometry(img_rgb, fov)
+    lit = correct_illumination(std, mask, strength=stats["params"]["illumination_strength"])
+    return eval_view(lit, mask, source_id, stats, size)

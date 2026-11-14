@@ -1,25 +1,37 @@
-# From CLAUDE.md section 19.12. Pin exact versions with pip freeze after the first working install.
-torch>=2.2
-torchvision>=0.17
-timm>=0.9
-lightly>=1.5
-albumentations>=1.4
-opencv-python-headless>=4.9
-pillow>=10
-imagehash>=4.3
-pandas>=2.1
-pyarrow>=15
-numpy>=1.26
-scikit-learn>=1.4
-iterative-stratification>=0.1.7
-faiss-cpu>=1.7.4
-networkx>=3.2
-torch-geometric>=2.5
-peft>=0.10
-umap-learn>=0.5
-matplotlib>=3.8
-hydra-core>=1.3
-wandb>=0.16
-gradio>=4.0
-huggingface_hub>=0.20   # downloads the weights
-pytest>=8
+# Exact versions behind every result in MODEL_CARD.md (Python 3.12.5, Windows 11).
+# GPU training: install torch + torchvision from the CUDA index first, e.g.
+#   pip install torch==2.11.0 torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cu128
+# then: pip install -r requirements.txt. The demo and the encoder run on CPU.
+# Keep numpy on 1.x: numpy 2 breaks this pandas version.
+
+# core: encoder, preprocessing, heads, trust layer, evaluation
+torch==2.11.0
+torchvision==0.26.0
+numpy==1.26.4
+opencv-python-headless==4.11.0.86
+pillow==10.1.0
+pandas==2.1.3
+pyarrow==20.0.0
+scipy==1.13.0
+scikit-learn==1.8.0
+iterative-stratification==0.1.9
+faiss-cpu==1.8.0
+joblib==1.3.2
+PyYAML==6.0.2
+matplotlib==3.9.2
+
+# weights download and demo app
+huggingface_hub==0.29.2
+gradio==5.20.1
+python-multipart==0.0.20
+pydantic==2.13.4       # demo tested with this version
+
+# training (encoder/train.py) and figures
+hydra-core==1.3.8
+omegaconf==2.3.1
+psutil==6.0.0
+umap-learn==0.5.7      # figures only; 0.6 declares numpy>=2
+# (scripts/dummy_run.py, the phase-0 logging check, also needs wandb)
+
+# tests
+pytest==8.2.1
